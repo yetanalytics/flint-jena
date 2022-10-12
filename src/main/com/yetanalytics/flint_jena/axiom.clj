@@ -118,14 +118,19 @@
   [{:keys [iri->datatype]} [_ literal]]
   (let [^String strval (p/-format-literal-strval literal)
         ?literal-ltag  (p/-format-literal-lang-tag literal)
-        ?literal-url   (p/-format-literal-url literal)]
+        ?literal-iri   (p/-format-literal-url literal)
+        iri->dt
+        (fn [dt-iri]
+          (try (iri->datatype dt-iri)
+               (catch Exception _
+                 (throw (IllegalArgumentException.
+                         (format "Datatype cannot be retrieved for IRI '%s'."
+                                 dt-iri))))))]
     (cond
       (some? ?literal-ltag)
-      (NodeFactory/createLiteral strval
-                                 ^String ?literal-ltag)
-      (some? ?literal-url)
-      (NodeFactory/createLiteral strval
-                                 ^RDFDatatype (iri->datatype ?literal-url))
+      (NodeFactory/createLiteral strval ^String ?literal-ltag)
+      (some? ?literal-iri)
+      (NodeFactory/createLiteral strval ^RDFDatatype (iri->dt ?literal-iri))
       :else
       (NodeFactory/createLiteral strval))))
 
