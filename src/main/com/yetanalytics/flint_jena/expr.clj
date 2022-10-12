@@ -68,7 +68,8 @@
 
 (defn- defvarardic-err-msg
   [sym]
-  (format "Expression '%s' cannot have less than 2 arguments!" sym))
+  (format "Expression '%s' cannot have less than 2 arguments!"
+          (second sym)))
 
 (defmacro defvaradic [sym class-name]
   `(defmethod ast-node->jena-expr ~sym

@@ -28,6 +28,9 @@
                              :iri->datatype ax/xsd-datatype-map})
        .toString))
 
+(comment
+ (s/conform ::es/expr '(and ?x ?y)))
+
 (deftest expression-test
   (testing "Nilary expressions"
     (are [expr-str expr]
@@ -111,7 +114,15 @@
       "(&& (&& ?a ?b) ?c)" '(and ?a ?b ?c)
       "(|| (|| ?a ?b) ?c)" '(or ?a ?b ?c)
       "(in ?x ?a ?b ?c)"   '(in ?x ?a ?b ?c)
-      "(notin ?x ?a ?b)"   '(not-in ?x ?a ?b)))
+      "(notin ?x ?a ?b)"   '(not-in ?x ?a ?b))
+    (is (= "Expression 'and' cannot have less than 2 arguments!"
+           (try (->> '[:expr/branch
+                       [[:expr/op and]
+                        [:expr/args [[:expr/terminal [:ax/var ?x]]]]]]
+                     (ast/ast->jena {:prologue      prologue
+                                     :iri->datatype ax/xsd-datatype-map}))
+                (catch IllegalArgumentException e
+                  (.getMessage e))))))
   (testing "Misc-arity expressions"
     (are [expr-str expr]
          (= expr-str
