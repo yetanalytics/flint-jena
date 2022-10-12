@@ -5,7 +5,8 @@
             [com.yetanalytics.flint-jena.ast   :as ast]
             [com.yetanalytics.flint-jena.axiom :as ax]
             [com.yetanalytics.flint.spec.expr  :as es])
-  (:import [org.apache.jena.sparql.core Prologue]
+  (:import [com.yetanalytics.flint_jena.expr ExprAsVar]
+           [org.apache.jena.sparql.core Prologue Var]
            [org.apache.jena.sparql.expr Expr]))
 
 (def prologue
@@ -27,9 +28,6 @@
        ^Expr (ast/ast->jena {:prologue      prologue
                              :iri->datatype ax/xsd-datatype-map})
        .toString))
-
-(comment
- (s/conform ::es/expr '(and ?x ?y)))
 
 (deftest expression-test
   (testing "Nilary expressions"
@@ -194,3 +192,17 @@
                                            :aggregate-fns #{}}))
                 (catch IllegalArgumentException e
                   (.getMessage e)))))))
+
+(deftest expr-as-var-test
+  (testing "Expression AS variable"
+    (let [{:keys [expression variable]
+           :as   expr-as-var}
+          (->> ['(+ ?a ?b) '?c]
+               (s/conform ::es/expr-as-var)
+               (ast/ast->jena {:prologue      prologue
+                               :iri->datatype ax/xsd-datatype-map}))]
+      (is (instance? ExprAsVar expr-as-var))
+      (is (instance? Expr expression))
+      (is (instance? Var variable))
+      (is (= "(+ ?a ?b)" (.toString ^Expr expression)))
+      (is (= "?c" (.toString ^Var variable))))))

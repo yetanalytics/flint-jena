@@ -323,29 +323,3 @@
 
 (defmethod ast/ast-node->jena :expr/as-var [_ [_ [expr var]]]
   (->ExprAsVar expr var))
-
-(comment
-  (.isVariable
-   (ast/ast->jena {}
-                [:ax/var '?bar]))
-  (ast/ast->jena {}
-               [:expr/op '-])
-  (ast/ast->jena {}
-               [:expr/args
-                [[:ax/var '?foo]
-                 [:ax/var '?bar]]])
-  (ast/ast->jena {}
-               [:expr/branch
-                [[:expr/op '=]
-                 [:expr/args
-                  [[:expr/terminal [:ax/var '?foo]]
-                   [:expr/terminal [:ax/var '?bar]]]]]])
-  
-  (ast/ast->jena {}
-               [:expr/branch
-                [[:expr/op 'regex]
-                 [:expr/args
-                  [[:expr/terminal [:ax/var '?foo]]
-                   [:expr/terminal [:ax/literal ".*"]]
-                   #_[:expr/terminal [:ax/literal "s"]]]]]])
-  )
