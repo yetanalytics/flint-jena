@@ -161,7 +161,7 @@
                 ^Expr (ast/ast->jena {:prologue      prologue
                                       :iri->datatype ax/xsd-datatype-map})
                 .toString)))
-    (is (= "AGG <http://fn.com>(?x , ?y))"
+    (is (= "AGG <http://fn.com>(?x , ?y)"
            (->> '("<http://fn.com>" ?x ?y)
                 (s/conform ::es/agg-expr)
                 ^Expr (ast/ast->jena {:prologue      prologue
