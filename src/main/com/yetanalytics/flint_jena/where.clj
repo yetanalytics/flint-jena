@@ -4,8 +4,6 @@
            [org.apache.jena.query Query]
            [org.apache.jena.sparql.syntax
             Element
-            ElementBind
-            ElementData
             ElementFilter
             ElementGroup
             ElementMinus
@@ -68,12 +66,12 @@
   (ElementFilter. expr))
 
 (defmethod ast/ast-node->jena :where/bind
-  [_ [_ {:keys [expression variable]}]]
-  (ElementBind. variable expression))
+  [_ [_ bind-element]]
+  bind-element)
 
 (defmethod ast/ast-node->jena :where/values
-  [_ [_ {:keys [variables values]}]]
-  (ElementData. variables values))
+  [_ [_ data-element]]
+  data-element)
 
 (defmethod ast/ast-node->jena :where/special
   [_ [_ element]]

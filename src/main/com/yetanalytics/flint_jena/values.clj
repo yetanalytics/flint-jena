@@ -3,9 +3,8 @@
   (:import [org.apache.jena.graph Node]
            [org.apache.jena.query Query]
            [org.apache.jena.sparql.core Var]
-           [org.apache.jena.sparql.engine.binding Binding]))
-
-(defrecord ValueDataBlock [variables values])
+           [org.apache.jena.sparql.engine.binding Binding]
+           [org.apache.jena.sparql.syntax ElementData]))
 
 (defmethod ast/ast-node->jena :values/undef [_ [_ undef]]
   ;; Returns nil/null
@@ -23,11 +22,13 @@
                              variables
                              value-row))
                  (.build row-builder))))]
-    (->ValueDataBlock variables value-bindings)))
+    (ElementData. variables value-bindings)))
 
 (defmethod ast/ast-node->jena :values [_ [_ values]] values)
 
 (defn add-values!
   [^Query query opts values-ast]
-  (let [[_ {:keys [variables values]}] (ast/ast->jena opts values-ast)]
-    (.setValuesDataBlock query variables values)))
+  (let [[_ ^ElementData var-binds] (ast/ast->jena opts values-ast)
+        variables (.getVars var-binds)
+        bindings  (.getRows var-binds)]
+    (.setValuesDataBlock query variables bindings)))

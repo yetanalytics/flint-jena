@@ -5,9 +5,9 @@
             [com.yetanalytics.flint-jena.ast   :as ast]
             [com.yetanalytics.flint-jena.axiom :as ax]
             [com.yetanalytics.flint.spec.expr  :as es])
-  (:import [com.yetanalytics.flint_jena.expr ExprAsVar]
-           [org.apache.jena.sparql.core Prologue Var]
-           [org.apache.jena.sparql.expr Expr]))
+  (:import [org.apache.jena.sparql.core Prologue Var]
+           [org.apache.jena.sparql.expr Expr]
+           [org.apache.jena.sparql.syntax ElementBind]))
 
 (def prologue
   (doto (Prologue.)
@@ -195,14 +195,12 @@
 
 (deftest expr-as-var-test
   (testing "Expression AS variable"
-    (let [{:keys [expression variable]
-           :as   expr-as-var}
+    (let [^ElementBind expr-as-var
           (->> ['(+ ?a ?b) '?c]
                (s/conform ::es/expr-as-var)
                (ast/ast->jena {:prologue      prologue
-                               :iri->datatype ax/xsd-datatype-map}))]
-      (is (instance? ExprAsVar expr-as-var))
-      (is (instance? Expr expression))
-      (is (instance? Var variable))
-      (is (= "(+ ?a ?b)" (.toString ^Expr expression)))
-      (is (= "?c" (.toString ^Var variable))))))
+                               :iri->datatype ax/xsd-datatype-map}))
+          ^Expr expr (.getExpr expr-as-var)
+          ^Var var   (.getVar expr-as-var)]
+      (is (= "(+ ?a ?b)" (.toString ^Expr expr)))
+      (is (= "?c" (.toString ^Var var))))))

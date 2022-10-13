@@ -3,7 +3,7 @@
   (:import [java.util List]
            [org.apache.jena.graph Node]
            [org.apache.jena.sparql.core Var]
-           [org.apache.jena.sparql.syntax Element]
+           [org.apache.jena.sparql.syntax Element ElementBind]
            [org.apache.jena.sparql.expr.aggregate AggregatorFactory]
            [org.apache.jena.sparql.expr
             ;; Arithmetic and Numeric Expressions
@@ -322,4 +322,4 @@
   (ast-node->jena-expr (merge opts ?kwargs) op args))
 
 (defmethod ast/ast-node->jena :expr/as-var [_ [_ [expr var]]]
-  (->ExprAsVar expr var))
+  (ElementBind. var expr))
