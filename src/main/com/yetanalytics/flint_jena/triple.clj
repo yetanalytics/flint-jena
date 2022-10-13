@@ -35,9 +35,9 @@
    (TriplePath. s p o))
   (-add-triple!
    ([p s o ^TripleCollector coll]
-    (.addTriple coll ^TriplePath (-create-triple p s o)))
+    (.addTriplePath coll ^TriplePath (-create-triple p s o)))
    ([p s o ^TripleCollectorMark coll idx]
-    (.addTriple coll idx ^TriplePath (-create-triple p s o)))))
+    (.addTriplePath coll idx ^TriplePath (-create-triple p s o)))))
 
 (defmethod ast/ast-node->jena :triple/vec [_ [_ [s p o]]]
   (let [triple-block (ElementPathBlock.)]
