@@ -62,20 +62,3 @@
     :not (let [neg-prop-set (P_NegPropSet.)]
            (-add-negated-path! path neg-prop-set)
            neg-prop-set)))
-
-(comment
-  
-  (def link-path
-    (PathFactory/pathLink
-    ;;  (ast/ast->jena {} [:ax/iri "http://foo.org"])
-     (ast/ast->jena {} [:ax/prefix-iri :foo/bar])
-    ;;  (ast/ast->jena {} [:ax/rdf-type :a])
-     ))
-  
-  (.getNode ^P_Link link-path)
-  
-  (let [neg-prop-set (P_NegPropSet.)]
-    (-add-negated-path! link-path neg-prop-set)
-    neg-prop-set)
-  
-  )
