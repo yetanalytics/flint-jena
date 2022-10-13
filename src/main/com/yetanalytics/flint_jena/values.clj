@@ -31,19 +31,3 @@
   [^Query query opts values-ast]
   (let [[_ {:keys [variables values]}] (ast/ast->jena opts values-ast)]
     (.setValuesDataBlock query variables values)))
-
-(comment
-  (ast/ast->jena
-   {}
-   [:values/map [;; vars
-                 [[:ax/var '?x]]
-                 ;; values
-                 [[[:ax/prefix-iri :uri1] [:ax/literal 1]]]]])
-  
-  (ast/ast->jena
-   {}
-   [:values/map [;; vars
-                 [[:ax/var '?x] [:ax/var '?y]]
-                 ;; values
-                 [[[:ax/prefix-iri :uri1] [:ax/literal 1]]
-                  [[:ax/prefix-iri :uri2] [:values/undef nil]]]]]))
