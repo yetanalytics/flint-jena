@@ -41,6 +41,7 @@
             ;; Other Expr Classes
             E_Function
             Expr
+            ExprAggregator
             ExprList
             ExprVar
             NodeValue]))
@@ -49,9 +50,6 @@
   (if (symbol? op) op :custom))
 
 (defmulti ast-node->jena-expr jena-expr-dispatch)
-
-;; Protocol impls are defined in other namespaces via extend-protocol.
-(defrecord ExprAsVar [expression variable])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Macros
@@ -236,37 +234,44 @@
 ;; Aggregate Expressions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn- agg->expr
+  [agg]
+  ;; TODO: Use squuids or var atom
+  (let [v (Var/alloc (str (java.util.UUID/randomUUID)))]
+    (ExprAggregator. v agg)))
+
 (defmethod ast-node->jena-expr 'sum
   [{dist? :distinct? :or {dist? false}} _ args]
-  (AggregatorFactory/createSum dist? (first args)))
+  (agg->expr (AggregatorFactory/createSum dist? (first args))))
 
 (defmethod ast-node->jena-expr 'min
   [{dist? :distinct? :or {dist? false}} _ args]
-  (AggregatorFactory/createMin dist? (first args)))
+  (agg->expr (AggregatorFactory/createMin dist? (first args))))
 
 (defmethod ast-node->jena-expr 'max
   [{dist? :distinct? :or {dist? false}} _ args]
-  (AggregatorFactory/createMax dist? (first args)))
+  (agg->expr (AggregatorFactory/createMax dist? (first args))))
 
 (defmethod ast-node->jena-expr 'avg
   [{dist? :distinct? :or {dist? false}} _ args]
-  (AggregatorFactory/createAvg dist? (first args)))
+  (agg->expr (AggregatorFactory/createAvg dist? (first args))))
 
 (defmethod ast-node->jena-expr 'sample
   [{dist? :distinct? :or {dist? false}} _ args]
-  (AggregatorFactory/createSample dist? (first args)))
+  (agg->expr (AggregatorFactory/createSample dist? (first args))))
 
 (defmethod ast-node->jena-expr 'count
   [{dist? :distinct? :or {dist? false}} _ args]
-  (if (= :* (first args))
-    (AggregatorFactory/createCount dist?)
-    (AggregatorFactory/createCountExpr dist? (first args))))
+  (agg->expr
+   (if (= :* (first args))
+     (AggregatorFactory/createCount dist?)
+     (AggregatorFactory/createCountExpr dist? (first args)))))
 
 (defmethod ast-node->jena-expr 'group-concat
   [{dist? :distinct?
     ?sep  :separator
     :or   {dist? false}} _ args]
-  (AggregatorFactory/createGroupConcat dist? (first args) ?sep nil))
+  (agg->expr (AggregatorFactory/createGroupConcat dist? (first args) ?sep nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Custom Expressions
@@ -285,7 +290,9 @@
     (cond
       ;; Custom Aggregate
       (contains? aggs fn-uri)
-      (AggregatorFactory/createCustom fn-uri (boolean ?dist) expr-list)
+      (ExprAggregator.
+       (Var/alloc (str (java.util.UUID/randomUUID)))
+       (AggregatorFactory/createCustom fn-uri (boolean ?dist) expr-list))
       ;; Custom Non-aggregate
       (nil? ?dist)
       (E_Function. fn-uri expr-list)

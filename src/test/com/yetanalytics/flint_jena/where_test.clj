@@ -53,7 +53,7 @@
       (.addElement path-block))))
 
 (deftest where-clause-test
-  (testing "WHERE clause"
+  (testing "WHERE"
     (is (.equalTo
          (let [t1 (doto (ElementPathBlock.)
                     (.addTriple bar-triple))
@@ -67,7 +67,7 @@
               (s/conform ::ws/where)
               (ast/ast->jena {:prologue prologue}))
          (NodeIsomorphismMap.))))
-  (testing "UNION clause"
+  (testing "UNION"
     (is (.equalTo
          (let [union (doto (ElementUnion.)
                        (.addElement bar-element)
@@ -80,7 +80,7 @@
               (s/conform ::ws/where)
               (ast/ast->jena {:prologue prologue}))
          (NodeIsomorphismMap.))))
-  (testing "OPTIONAL clause"
+  (testing "OPTIONAL"
     (is (.equalTo
          (let [optional (ElementOptional. bar-element)]
            (doto (ElementGroup.)
@@ -90,7 +90,7 @@
               (s/conform ::ws/where)
               (ast/ast->jena {:prologue prologue}))
          (NodeIsomorphismMap.))))
-  (testing "MINUS clause"
+  (testing "MINUS"
     (is (.equalTo
          (let [minus (ElementMinus. bar-element)]
            (doto (ElementGroup.)
@@ -100,7 +100,7 @@
               (s/conform ::ws/where)
               (ast/ast->jena {:prologue prologue}))
          (NodeIsomorphismMap.))))
-  (testing "GRAPH clause"
+  (testing "GRAPH"
     (is (.equalTo
          (let [graph (ElementNamedGraph. bar-node baz-element)]
            (doto (ElementGroup.)
@@ -110,7 +110,7 @@
               (s/conform ::ws/where)
               (ast/ast->jena {:prologue prologue}))
          (NodeIsomorphismMap.))))
-  (testing "SERVICE clause"
+  (testing "SERVICE"
     (is (.equalTo
          (let [service (ElementService. bar-node baz-element false)]
            (doto (ElementGroup.)
@@ -129,7 +129,7 @@
               (s/conform ::ws/where)
               (ast/ast->jena {:prologue prologue}))
          (NodeIsomorphismMap.))))
-  (testing "FILTER clause"
+  (testing "FILTER"
     (is (.equalTo
          (let [expr   (E_Exists. baz-element)
                filter (ElementFilter. expr)]
@@ -139,7 +139,7 @@
               (s/conform ::ws/where)
               (ast/ast->jena {:prologue prologue}))
          (NodeIsomorphismMap.))))
-  (testing "BIND clause"
+  (testing "BIND"
     (is (.equalTo
          (let [var  (Var/alloc "isExists")
                expr (E_Exists. baz-element)
@@ -150,7 +150,7 @@
               (s/conform ::ws/where)
               (ast/ast->jena {:prologue prologue}))
          (NodeIsomorphismMap.))))
-  (testing "VALUES clause"
+  (testing "VALUES"
     (is (.equalTo
          (let [x-var (Var/alloc "x")
                x-val (.build

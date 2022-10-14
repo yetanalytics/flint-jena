@@ -6,7 +6,7 @@
             [com.yetanalytics.flint-jena.axiom :as ax]
             [com.yetanalytics.flint.spec.expr  :as es])
   (:import [org.apache.jena.sparql.core Prologue Var]
-           [org.apache.jena.sparql.expr Expr]
+           [org.apache.jena.sparql.expr Expr ExprAggregator]
            [org.apache.jena.sparql.syntax ElementBind]))
 
 (def prologue
@@ -27,6 +27,15 @@
        (s/conform ::es/agg-expr)
        ^Expr (ast/ast->jena {:prologue      prologue
                              :iri->datatype ax/xsd-datatype-map})
+       .toString))
+
+(defn- agg-expr->agg-str
+  [agg-expr]
+  (->> agg-expr
+       (s/conform ::es/agg-expr)
+       ^ExprAggregator (ast/ast->jena {:prologue      prologue
+                                       :iri->datatype ax/xsd-datatype-map})
+       .getAggregator
        .toString))
 
 (deftest expression-test
@@ -144,7 +153,7 @@
            (-> '(not (or true (and false false))) agg-expr->str))))
   (testing "Aggregate expressions"
     (are [expr-str expr]
-         (= expr-str (agg-expr->str expr))
+         (= expr-str (agg-expr->agg-str expr))
       "SUM(?x)"    '(sum ?x)
       "MIN(?x)"    '(min ?x)
       "MAX(?x)"    '(max ?x)
@@ -173,16 +182,18 @@
     (is (= "AGG <http://fn.com>(?x , ?y)"
            (->> '("<http://fn.com>" ?x ?y)
                 (s/conform ::es/agg-expr)
-                ^Expr (ast/ast->jena {:prologue      prologue
-                                      :iri->datatype ax/xsd-datatype-map
-                                      :aggregate-fns #{"http://fn.com"}})
+                ^ExprAggregator (ast/ast->jena {:prologue      prologue
+                                                :iri->datatype ax/xsd-datatype-map
+                                                :aggregate-fns #{"http://fn.com"}})
+                .getAggregator
                 .toString)))
     (is (= "AGG <http://fn.com>(DISTINCT ?x , ?y)"
            (->> '("<http://fn.com>" ?x ?y :distinct? true)
                 (s/conform ::es/agg-expr)
-                ^Expr (ast/ast->jena {:prologue      prologue
-                                      :iri->datatype ax/xsd-datatype-map
-                                      :aggregate-fns #{"http://fn.com"}})
+                ^ExprAggregator (ast/ast->jena {:prologue      prologue
+                                                :iri->datatype ax/xsd-datatype-map
+                                                :aggregate-fns #{"http://fn.com"}})
+                .getAggregator
                 .toString)))
     (is (= "Custom function 'http://fn.com' not registered as aggregate; cannot use 'distinct?' keyword."
            (try (->> '("<http://fn.com>" ?x ?y :distinct? true)
