@@ -78,3 +78,32 @@
                   (s/conform ::ms/order-by)
                   (conj [:order-by])
                   (ast/ast->jena {})))))))
+
+(deftest having-test
+  (testing "HAVING"
+    (is (= [(E_Add. (ExprVar. (Var/alloc "v1"))
+                    (ExprVar. (Var/alloc "v2")))]
+           (->> '[(+ ?v1 ?v2)]
+                (s/conform ::ms/having)
+                (conj [:having])
+                (ast/ast->jena {}))))
+    (is (= [(AggSum. (ExprVar. (Var/alloc "v1")))]
+           (->> '[(sum ?v1)]
+                (s/conform ::ms/having)
+                (conj [:having])
+                (ast/ast->jena {})
+                (map #(.getAggregator ^ExprAggregator %)))))))
+
+(deftest limit-test
+  (testing "LIMIT"
+    (is (= 100 (->> 100
+                    (s/conform ::ms/limit)
+                    (conj [:limit])
+                    (ast/ast->jena {}))))))
+
+(deftest offset-test
+  (testing "OFFSET"
+    (is (= 100 (->> 100
+                    (s/conform ::ms/offset)
+                    (conj [:offset])
+                    (ast/ast->jena {}))))))
