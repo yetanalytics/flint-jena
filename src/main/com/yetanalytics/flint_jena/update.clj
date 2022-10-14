@@ -228,7 +228,7 @@
   graph-node)
 
 (defmethod ast/ast-node->jena :with [_opts [_ ^Node graph-node]]
-  (.getURI graph-node))
+  graph-node)
 
 ;; Update Creation
 

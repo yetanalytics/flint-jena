@@ -28,7 +28,7 @@
 
 (defn add-values!
   [^Query query opts values-ast]
-  (let [[_ ^ElementData var-binds] (ast/ast->jena opts values-ast)
+  (let [^ElementData var-binds (ast/ast->jena opts values-ast)
         variables (.getVars var-binds)
         bindings  (.getRows var-binds)]
     (.setValuesDataBlock query variables bindings)))

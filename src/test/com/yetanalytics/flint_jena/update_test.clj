@@ -175,4 +175,5 @@
            (->> :foo/bar
                 (s/conform ::us/with)
                 (conj [:with])
-                (ast/ast->jena {:prologue prefix-prologue}))))))
+                ^Node (ast/ast->jena {:prologue prefix-prologue})
+                .getURI)))))
