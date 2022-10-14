@@ -110,7 +110,7 @@
               (s/conform ::ws/where)
               (ast/ast->jena {:prologue prologue}))
          (NodeIsomorphismMap.))))
-  (testing "SERVICE"
+  (testing "SERVICE (SILENT)"
     (is (.equalTo
          (let [service (ElementService. bar-node baz-element false)]
            (doto (ElementGroup.)
