@@ -16,6 +16,10 @@
             ElementSubQuery
             ElementUnion]))
 
+(defn add-where! [^Query query opts where-ast]
+  (let [where-element (ast/ast->jena opts where-ast)]
+    (.setQueryPattern query where-element)))
+
 (defmethod ast/ast-node->jena :where-sub/empty
   [_ _]
   (ElementGroup.))
@@ -63,8 +67,6 @@
 (defmethod select-query-add! :values
   [query opts values-ast]
   (values/add-values! query opts values-ast))
-
-(declare add-where!)
 
 (defmethod select-query-add! :where
   [query opts where-ast]
@@ -145,7 +147,3 @@
 (defmethod ast/ast-node->jena :where
   [_ [_ where-element]]
   where-element)
-
-(defn add-where! [^Query query opts where-ast]
-  (let [where-element (ast/ast->jena opts where-ast)]
-    (.setQueryPattern query where-element)))
