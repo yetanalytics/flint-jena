@@ -16,7 +16,7 @@
 
 (deftest from-test
   (testing "FROM"
-    (is (= (NodeFactory/createURI "http://foo.org/bar")
+    (is (= [:from (NodeFactory/createURI "http://foo.org/bar")]
            (->> "<http://foo.org/bar>"
                 (s/conform ::qs/from)
                 (conj [:from])
@@ -30,8 +30,8 @@
                 (conj [:from])
                 (ast/ast->jena {:prologue prefixes-prologue})))))
   (testing "FROM NAMED"
-    (is (= [(NodeFactory/createURI "http://foo.org/bar")
-            (NodeFactory/createURI "http://foo.org/baz")]
+    (is (= [:from-named [(NodeFactory/createURI "http://foo.org/bar")
+                         (NodeFactory/createURI "http://foo.org/baz")]]
            (->> ["<http://foo.org/bar>"
                  :foo/baz]
                 (s/conform ::qs/from-named)
@@ -40,76 +40,88 @@
 
 (deftest query-test
   (testing "SELECT"
-    (is (= [(Var/alloc "x") (Var/alloc "y") (Var/alloc "z")]
-           (->> '[?x ?y ?z]
-                (s/conform ::ss/select)
-                (conj [:select])
-                (ast/ast->jena {}))
-           (->> '[?x ?y ?z]
-                (s/conform ::ss/select-distinct)
-                (conj [:select-distinct])
-                (ast/ast->jena {}))
-           (->> '[?x ?y ?z]
-                (s/conform ::ss/select-reduced)
-                (conj [:select-reduced])
-                (ast/ast->jena {}))))
-    (is (= [(Var/alloc "w")
-            (ElementBind. (Var/alloc "z")
-                          (E_Add. (ExprVar. (Var/alloc "x"))
-                                  (ExprVar. (Var/alloc "y"))))]
-           (->> '[?w [(+ ?x ?y) ?z]]
-                (s/conform ::ss/select)
-                (conj [:select])
-                (ast/ast->jena {}))
-           (->> '[?w [(+ ?x ?y) ?z]]
-                (s/conform ::ss/select-distinct)
-                (conj [:select-distinct])
-                (ast/ast->jena {}))
-           (->> '[?w [(+ ?x ?y) ?z]]
-                (s/conform ::ss/select-reduced)
-                (conj [:select-reduced])
-                (ast/ast->jena {}))))
-    (is (= :*
-           (->> '*
-                (s/conform ::ss/select)
-                (conj [:select])
-                (ast/ast->jena {}))
-           (->> '*
-                (s/conform ::ss/select-distinct)
-                (conj [:select-distinct])
-                (ast/ast->jena {}))
-           (->> '*
-                (s/conform ::ss/select-reduced)
-                (conj [:select-reduced])
-                (ast/ast->jena {})))))
+    (let [xyz [(Var/alloc "x") (Var/alloc "y") (Var/alloc "z")]]
+      (is (= [:select xyz]
+             (->> '[?x ?y ?z]
+                  (s/conform ::ss/select)
+                  (conj [:select])
+                  (ast/ast->jena {}))))
+      (is (= [:select-distinct xyz]
+             (->> '[?x ?y ?z]
+                  (s/conform ::ss/select-distinct)
+                  (conj [:select-distinct])
+                  (ast/ast->jena {}))))
+      (is (= [:select-reduced xyz]
+             (->> '[?x ?y ?z]
+                  (s/conform ::ss/select-reduced)
+                  (conj [:select-reduced])
+                  (ast/ast->jena {})))))
+    (let [wxyz [(Var/alloc "w")
+                 (ElementBind. (Var/alloc "z")
+                               (E_Add. (ExprVar. (Var/alloc "x"))
+                                       (ExprVar. (Var/alloc "y"))))]]
+      (is (= [:select wxyz]
+             (->> '[?w [(+ ?x ?y) ?z]]
+                  (s/conform ::ss/select)
+                  (conj [:select])
+                  (ast/ast->jena {}))))
+      (is (= [:select-distinct wxyz]
+             (->> '[?w [(+ ?x ?y) ?z]]
+                  (s/conform ::ss/select-distinct)
+                  (conj [:select-distinct])
+                  (ast/ast->jena {}))))
+      (is (= [:select-reduced wxyz]
+             (->> '[?w [(+ ?x ?y) ?z]]
+                  (s/conform ::ss/select-reduced)
+                  (conj [:select-reduced])
+                  (ast/ast->jena {})))))
+    (let [wildcard :*]
+      (is (= [:select wildcard]
+             (->> '*
+                  (s/conform ::ss/select)
+                  (conj [:select])
+                  (ast/ast->jena {}))))
+      (is (= [:select-distinct wildcard]
+             (->> '*
+                  (s/conform ::ss/select-distinct)
+                  (conj [:select-distinct])
+                  (ast/ast->jena {}))))
+      (is (= [:select-reduced wildcard]
+             (->> '*
+                  (s/conform ::ss/select-reduced)
+                  (conj [:select-reduced])
+                  (ast/ast->jena {}))))))
   (testing "CONSTRUCT"
-    (is (= [(Triple. (Var/alloc "x") (Var/alloc "y") (Var/alloc "z"))
-            (Triple. (Var/alloc "a") (Var/alloc "b") (Var/alloc "c"))]
-           (->> '[[?x ?y ?z]
-                  {?a {?b #{?c}}}]
-                (s/conform ::qs/construct)
-                (conj [:construct])
-                ^Template (ast/ast->jena {})
-                .getTriples))))
+    (is (= [:construct
+            [(Triple. (Var/alloc "x") (Var/alloc "y") (Var/alloc "z"))
+             (Triple. (Var/alloc "a") (Var/alloc "b") (Var/alloc "c"))]]
+           (-> (->> '[[?x ?y ?z]
+                      {?a {?b #{?c}}}]
+                    (s/conform ::qs/construct)
+                    (conj [:construct])
+                    (ast/ast->jena {}))
+               (update 1 #(.getTriples ^Template %))))))
   (testing "DESCRIBE"
-    (is (= [(Var/alloc "x")
-            (NodeFactory/createURI "http://foo.org/y")
-            (NodeFactory/createURI "http://foo.org/z")]
+    (is (= [:describe [(Var/alloc "x")
+                       (NodeFactory/createURI "http://foo.org/y")
+                       (NodeFactory/createURI "http://foo.org/z")]]
            (->> '[?x "<http://foo.org/y>" :foo/z]
                 (s/conform ::qs/describe)
                 (conj [:describe])
                 (ast/ast->jena {:prologue prefixes-prologue}))))
-    (is (= :*
+    (is (= [:describe :*]
            (->> '*
                 (s/conform ::qs/describe)
                 (conj [:describe])
                 (ast/ast->jena {})))))
   (testing "ASK"
-    (is (nil? (->> nil
-                   (s/conform ::qs/ask)
-                   (conj [:ask])
-                   (ast/ast->jena {}))))
-    (is (= [] (->> []
-                   (s/conform ::qs/ask)
-                   (conj [:ask])
-                   (ast/ast->jena {}))))))
+    (is (= [:ask nil]
+           (->> nil
+                (s/conform ::qs/ask)
+                (conj [:ask])
+                (ast/ast->jena {}))))
+    (is (= [:ask []]
+           (->> []
+                (s/conform ::qs/ask)
+                (conj [:ask])
+                (ast/ast->jena {}))))))

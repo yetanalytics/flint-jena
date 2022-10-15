@@ -24,11 +24,10 @@
                  (.build row-builder))))]
     (ElementData. variables value-bindings)))
 
-(defmethod ast/ast-node->jena :values [_ [_ values]] values)
+(defmethod ast/ast-node->jena :values [_ values] values)
 
 (defn add-values!
-  [^Query query opts values-ast]
-  (let [^ElementData var-binds (ast/ast->jena opts values-ast)
-        variables (.getVars var-binds)
-        bindings  (.getRows var-binds)]
+  [^Query query ^ElementData var-value-binds]
+  (let [variables (.getVars var-value-binds)
+        bindings  (.getRows var-value-binds)]
     (.setValuesDataBlock query variables bindings)))

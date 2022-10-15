@@ -17,14 +17,16 @@
 
 (deftest values-block-test
   (testing "VALUES block"
-    (let [^ElementData data-block-1
+    (let [[values-kw-1 ^ElementData data-block-1]
           (->> '{[?foo ?bar ?baz] [[2 nil :pre/one] [nil "x" :pre/two]]}
                (s/conform ::vs/values)
+               (conj [:values])
                (ast/ast->jena {:iri->datatype ax/xsd-datatype-map
                                :prologue      prologue}))
-          ^ElementData data-block-2
+          [values-kw-2 ^ElementData data-block-2]
           (->> '{?foo [2 nil] ?bar [nil "x"] ?baz [:pre/one :pre/two]}
                (s/conform ::vs/values)
+               (conj [:values])
                (ast/ast->jena {:iri->datatype ax/xsd-datatype-map
                                :prologue      prologue}))
           foo-var
@@ -43,6 +45,10 @@
            (doto (Binding/builder)
              (.add bar-var (NodeFactory/createLiteral "x" XSDDatatype/XSDstring))
              (.add baz-var (NodeFactory/createURI "http://prefix.org/two"))))]
+      (testing "- AST keyword"
+        (is (= :values
+               values-kw-1
+               values-kw-2)))
       (testing "- variables"
         (is (= #{foo-var bar-var baz-var}
                (set (.getVars data-block-1))

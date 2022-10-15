@@ -27,11 +27,11 @@
 
 (defmethod ast/ast-node->jena :mod/expr-as-var [_ [_ expr-as-var]] expr-as-var)
 
-(defmethod ast/ast-node->jena :group-by [_ [_ group-bys]] group-bys)
-(defmethod ast/ast-node->jena :order-by [_ [_ order-bys]] order-bys)
-(defmethod ast/ast-node->jena :having [_ [_ havings]] havings)
-(defmethod ast/ast-node->jena :limit [_ [_ limit]] limit)
-(defmethod ast/ast-node->jena :offset [_ [_ offset]] offset)
+(defmethod ast/ast-node->jena :group-by [_ group-bys] group-bys)
+(defmethod ast/ast-node->jena :order-by [_ order-bys] order-bys)
+(defmethod ast/ast-node->jena :having [_ havings] havings)
+(defmethod ast/ast-node->jena :limit [_ limit] limit)
+(defmethod ast/ast-node->jena :offset [_ offset] offset)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Records + Protocols
@@ -75,17 +75,17 @@
 ;; Adding functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn add-group-bys! [query opts group-by-ast]
-  (run! #(-add-group-by! % query) (ast/ast->jena opts group-by-ast)))
+(defn add-group-bys! [query group-bys]
+  (run! #(-add-group-by! % query) group-bys))
 
-(defn add-order-bys! [query opts order-by-ast]
-  (run! #(-add-order-by! % query) (ast/ast->jena opts order-by-ast)))
+(defn add-order-bys! [query order-bys]
+  (run! #(-add-order-by! % query) order-bys))
 
-(defn add-having! [^Query query opts having-ast]
-  (run! #(.addHavingCondition query %) (ast/ast->jena opts having-ast)))
+(defn add-having! [^Query query havings]
+  (run! #(.addHavingCondition query %) havings))
 
-(defn add-limit! [^Query query opts limit-ast]
-  (.setLimit query (ast/ast->jena opts limit-ast)))
+(defn add-limit! [^Query query limit]
+  (.setLimit query limit))
 
-(defn add-offset! [^Query query opts offset-ast]
-  (.setOffset query (ast/ast->jena opts offset-ast)))
+(defn add-offset! [^Query query offset]
+  (.setOffset query offset))

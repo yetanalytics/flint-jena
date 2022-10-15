@@ -19,26 +19,24 @@
 
 (defmulti query-add! ast/ast-node-dispatch)
 
-(defmethod query-add! :default [_ _ _] nil)
+(defmethod query-add! :default [_ _] nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Graph URIs
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmethod ast/ast-node->jena :from [_ [_ iri-node]] iri-node)
-(defmethod ast/ast-node->jena :from-named [_ [_ iri-nodes]] iri-nodes)
+(defmethod ast/ast-node->jena :from [_ from-iri] from-iri)
+(defmethod ast/ast-node->jena :from-named [_ from-iris] from-iris)
 
 (defmethod query-add! :from
-  [^Query query opts from-ast]
-  (let [^Node iri-node (ast/ast->jena opts from-ast)]
-    (.addGraphURI query (.getURI iri-node))))
+  [^Query query [_ iri-node]]
+  (.addGraphURI query (.getURI iri-node)))
 
 (defmethod query-add! :from-named
-  [^Query query opts from-named-ast]
-  (let [iri-nodes (ast/ast->jena opts from-named-ast)]
-    (run! (fn [^Node iri-node]
-            (.addNamedGraphURI query (.getURI iri-node)))
-          iri-nodes)))
+  [^Query query [_ iri-nodes]]
+  (run! (fn [^Node iri-node]
+          (.addNamedGraphURI query (.getURI iri-node)))
+        iri-nodes))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Query types
@@ -52,24 +50,24 @@
 (defmethod ast/ast-node->jena :select/var-or-exprs [_opts [_ var-or-exprs]]
   var-or-exprs)
 
-(defmethod ast/ast-node->jena :select [_ [_ select]]
+(defmethod ast/ast-node->jena :select [_ select]
   select)
-(defmethod ast/ast-node->jena :select-distinct [_ [_ select-distinct]]
+(defmethod ast/ast-node->jena :select-distinct [_ select-distinct]
   select-distinct)
-(defmethod ast/ast-node->jena :select-reduced [_ [_ select-reduced]]
+(defmethod ast/ast-node->jena :select-reduced [_ select-reduced]
   select-reduced)
 
 (defmethod query-add! :select
-  [^Query query opts select-ast]
-  (sel/add-select! query opts select-ast))
+  [^Query query [_ select-ast]]
+  (sel/add-select! query select-ast))
 
 (defmethod query-add! :select-distinct
-  [^Query query opts select-ast]
-  (sel/add-select-distinct! query opts select-ast))
+  [^Query query [_ select-ast]]
+  (sel/add-select-distinct! query select-ast))
 
 (defmethod query-add! :select-reduced
-  [^Query query opts select-ast]
-  (sel/add-select-reduced! query opts select-ast))
+  [^Query query [_ select-ast]]
+  (sel/add-select-reduced! query select-ast))
 
 ;; CONSTRUCT ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -83,67 +81,65 @@
        (.addTriple acc triple)))
     (.getBGP acc)))
 
-(defmethod ast/ast-node->jena :construct [_ [_ triple-elements]]
-  (Template. (elements->nopath-triples triple-elements)))
+(defmethod ast/ast-node->jena :construct [_ [kw triple-elements]]
+  [kw (Template. (elements->nopath-triples triple-elements))])
 
 (defmethod query-add! :construct
-  [^Query query opts construct-ast]
-  (let [construct-temp (ast/ast->jena opts construct-ast)]
-    (.setConstructTemplate query construct-temp)))
+  [^Query query [_ construct-template]]
+  (.setConstructTemplate query construct-template))
 
 ;; DESCRIBE ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmethod ast/ast-node->jena :describe/vars-or-iris [_ [_ var-or-iris]]
   var-or-iris)
 
-(defmethod ast/ast-node->jena :describe [_ [_ describe]]
+(defmethod ast/ast-node->jena :describe [_ describe]
   describe)
 
 (defmethod query-add! :describe
-  [^Query query opts describe-ast]
-  (let [describes (ast/ast->jena opts describe-ast)]
-    (if (= :* describes)
-      (.setQueryResultStar query true)
-      (run! (fn [^Node dn] (.addDescribeNode query dn)) describes))))
+  [^Query query [_ describes]]
+  (if (= :* describes)
+    (.setQueryResultStar query true)
+    (run! (fn [^Node dn] (.addDescribeNode query dn)) describes)))
 
 ;; ASK ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmethod ast/ast-node->jena :ask [_ [_ ask]] ask)
+(defmethod ast/ast-node->jena :ask [_ ask] ask)
 
 ;; Nothing special to set for ASK clause, so this is a no-op
-(defmethod query-add! :ask [_query _opts _ask-node] nil)
+(defmethod query-add! :ask [_query _ask-node] nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Query elements and modifiers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmethod query-add! :group-by
-  [query opts group-by-ast]
-  (mod/add-group-bys! query opts group-by-ast))
+  [query [_ group-by-ast]]
+  (mod/add-group-bys! query group-by-ast))
 
 (defmethod query-add! :order-by
-  [query opts order-by-ast]
-  (mod/add-order-bys! query opts order-by-ast))
+  [query [_ order-by-ast]]
+  (mod/add-order-bys! query order-by-ast))
 
 (defmethod query-add! :having
-  [query opts having-ast]
-  (mod/add-having! query opts having-ast))
+  [query [_ having-ast]]
+  (mod/add-having! query having-ast))
 
 (defmethod query-add! :limit
-  [query opts limit-ast]
-  (mod/add-limit! query opts limit-ast))
+  [query [_ limit-ast]]
+  (mod/add-limit! query limit-ast))
 
 (defmethod query-add! :offset
-  [query opts offset-ast]
-  (mod/add-offset! query opts offset-ast))
+  [query [_ offset-ast]]
+  (mod/add-offset! query offset-ast))
 
 (defmethod query-add! :values
-  [query opts values-ast]
-  (values/add-values! query opts values-ast))
+  [query [_ values-ast]]
+  (values/add-values! query values-ast))
 
 (defmethod query-add! :where
-  [query opts where-ast]
-  (where/add-where! query opts where-ast))
+  [query [_ where-ast]]
+  (where/add-where! query where-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Putting it all together
@@ -159,14 +155,13 @@
 
 (defn- add-query-clauses!
   [query opts query-ast]
-  (run! (fn [ast-node] (query-add! query opts ast-node)) query-ast))
+  (->> query-ast
+       (ast/ast->jena opts)
+       (filter (fn [[k _]] (not (#{:base :prefixes} k))))
+       (run! (fn [ast-node] (query-add! query ast-node)))))
 
 (defn create-query
-  ([opts [query-type query-ast]]
-   (doto (Query.)
-     (set-query-type! query-type)
-     (add-query-clauses! opts query-ast)))
-  ([prologue opts [query-type query-ast]]
-   (doto (Query. prologue)
-     (set-query-type! query-type)
-     (add-query-clauses! opts query-ast))))
+  [prologue opts [query-type query-ast]]
+  (doto (Query. prologue)
+    (set-query-type! query-type)
+    (add-query-clauses! opts query-ast)))

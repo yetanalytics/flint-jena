@@ -9,16 +9,16 @@
 ;; AST -> Jena
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmethod ast/ast-node->jena :base [_ [_ ^Node base]]
-  (.getURI base))
+(defmethod ast/ast-node->jena :base [_ [kw ^Node base]]
+  [kw (.getURI base)])
 
 (defmethod ast/ast-node->jena :prologue/prefix
   [_ [_ [prefix ^Node iri-node]]]
   [prefix (.getURI iri-node)])
 
-(defmethod ast/ast-node->jena :prefixes [_ [_ prefixes]]
-  (doto (PrefixMapping$Factory/create)
-    (.setNsPrefixes ^Map (into {} prefixes))))
+(defmethod ast/ast-node->jena :prefixes [_ [kw prefixes]]
+  [kw (doto (PrefixMapping$Factory/create)
+        (.setNsPrefixes ^Map (into {} prefixes)))])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Prologue creation + use
@@ -26,21 +26,23 @@
 
 (defmulti prologue-add! ast/ast-node-dispatch)
 
-(defmethod prologue-add! :default [_ _ _] nil)
+(defmethod prologue-add! :default [_ _] nil)
 
 (defmethod prologue-add! :base
-  [^Prologue prologue opts base-ast]
-  (.setBaseURI prologue (ast/ast->jena opts base-ast)))
+  [^Prologue prologue [_ base-ast]]
+  (.setBaseURI prologue base-ast))
 
 (defmethod prologue-add! :prefixes
-  [^Prologue prologue opts prefix-ast]
-  (.setPrefixMapping prologue (ast/ast->jena opts prefix-ast)))
+  [^Prologue prologue [_ prefix-ast]]
+  (.setPrefixMapping prologue prefix-ast))
 
 (defn create-prologue
   [opts [_ query-update-ast]]
   (let [prologue (Prologue.)]
-    (run! (fn [ast-node] (prologue-add! prologue opts ast-node))
-          query-update-ast)
+    (->> query-update-ast
+         (filter (fn [[k _]] (#{:base :prefixes} k)))
+         (ast/ast->jena opts)
+         (run! (fn [ast-node] (prologue-add! prologue ast-node))))
     prologue))
 
 (defn add-prologue!

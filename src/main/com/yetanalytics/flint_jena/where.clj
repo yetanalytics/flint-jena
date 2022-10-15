@@ -16,9 +16,10 @@
             ElementSubQuery
             ElementUnion]))
 
-(defn add-where! [^Query query opts where-ast]
-  (let [where-element (ast/ast->jena opts where-ast)]
-    (.setQueryPattern query where-element)))
+(defmethod ast/ast-node->jena :where [_ where] where)
+
+(defn add-where! [^Query query where-element]
+  (.setQueryPattern query where-element))
 
 (defmethod ast/ast-node->jena :where-sub/empty
   [_ _]
@@ -30,59 +31,59 @@
 
 (defmulti select-query-add! ast/ast-node-dispatch)
 
-(defmethod select-query-add! :default [_ _ _] nil)
+(defmethod select-query-add! :default [_ _] nil)
 
 (defmethod select-query-add! :select
-  [^Query query opts select-ast]
-  (sel/add-select! query opts select-ast))
+  [^Query query select-ast]
+  (sel/add-select! query select-ast))
 
 (defmethod select-query-add! :select-distinct
-  [^Query query opts select-ast]
-  (sel/add-select-distinct! query opts select-ast))
+  [^Query query select-ast]
+  (sel/add-select-distinct! query select-ast))
 
 (defmethod select-query-add! :select-reduced
-  [^Query query opts select-ast]
-  (sel/add-select-reduced! query opts select-ast))
+  [^Query query select-ast]
+  (sel/add-select-reduced! query select-ast))
 
 (defmethod select-query-add! :group-by
-  [query opts group-by-ast]
-  (mod/add-group-bys! query opts group-by-ast))
+  [query group-by-ast]
+  (mod/add-group-bys! query group-by-ast))
 
 (defmethod select-query-add! :order-by
-  [query opts order-by-ast]
-  (mod/add-order-bys! query opts order-by-ast))
+  [query order-by-ast]
+  (mod/add-order-bys! query order-by-ast))
 
 (defmethod select-query-add! :having
-  [query opts having-ast]
-  (mod/add-having! query opts having-ast))
+  [query having-ast]
+  (mod/add-having! query having-ast))
 
 (defmethod select-query-add! :limit
-  [query opts limit-ast]
-  (mod/add-limit! query opts limit-ast))
+  [query limit-ast]
+  (mod/add-limit! query limit-ast))
 
 (defmethod select-query-add! :offset
-  [query opts offset-ast]
-  (mod/add-offset! query opts offset-ast))
+  [query offset-ast]
+  (mod/add-offset! query offset-ast))
 
 (defmethod select-query-add! :values
-  [query opts values-ast]
-  (values/add-values! query opts values-ast))
+  [query values-ast]
+  (values/add-values! query values-ast))
 
 (defmethod select-query-add! :where
-  [query opts where-ast]
-  (add-where! query opts where-ast))
+  [query where-ast]
+  (add-where! query where-ast))
 
 (defn- create-query
-  [{:keys [prologue]} query-ast]
-  (let [query (Query. prologue)]
+  [query-ast]
+  (let [query (Query.)]
     (.setQuerySelectType query)
     (run! (fn [ast-node] (select-query-add! query ast-node))
           query-ast)
     query))
 
 (defmethod ast/ast-node->jena :where-sub/select
-  [opts [_ sub-query]]
-  (ElementSubQuery. (create-query opts sub-query)))
+  [_ [_ sub-query]]
+  (ElementSubQuery. (create-query sub-query)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; WHERE clauses
@@ -143,7 +144,3 @@
 (defmethod ast/ast-node->jena :where/special
   [_ [_ element]]
   element)
-
-(defmethod ast/ast-node->jena :where
-  [_ [_ where-element]]
-  where-element)

@@ -8,8 +8,11 @@
            [org.apache.jena.sparql.core Prologue Quad]
            [org.apache.jena.sparql.modify.request QuadAcc QuadDataAcc Target]))
 
+(def foo-bar-node
+  (NodeFactory/createURI "http://foo.org/bar"))
+
 (def foo-bar-target
-  (Target/create (NodeFactory/createURI "http://foo.org/bar")))
+  (Target/create ^Node foo-bar-node))
 
 (def graph-target
   (Target/create (NodeFactory/createURI "http://graph.org/")))
@@ -28,73 +31,80 @@
            (ast/ast->jena {} [:update/graph
                               [:graph [:ax/iri "<http://foo.org/bar>"]]]))))
   (testing "LOAD (SILENT)"
-    (is (= "http://graph.org/"
+    (is (= [:load "http://graph.org/"]
            (->> "<http://graph.org/>"
                 (s/conform ::us/load)
                 (conj [:load])
-                (ast/ast->jena {}))
+                (ast/ast->jena {}))))
+    (is (= [:load-silent "http://graph.org/"]
            (->> "<http://graph.org/>"
                 (s/conform ::us/load-silent)
                 (conj [:load-silent])
                 (ast/ast->jena {}))))
-    (is (= (NodeFactory/createURI "http://graph.org/")
+    (is (= [:into (NodeFactory/createURI "http://graph.org/")]
            (->> [:graph "<http://graph.org/>"]
                 (s/conform ::us/into)
                 (conj [:into])
                 (ast/ast->jena {})))))
   (testing "CREATE"
-    (is (= (NodeFactory/createURI "http://graph.org/")
+    (is (= [:create (NodeFactory/createURI "http://graph.org/")]
            (->> [:graph "<http://graph.org/>"]
                 (s/conform ::us/create)
                 (conj [:create])
-                (ast/ast->jena {}))
+                (ast/ast->jena {}))))
+    (is (= [:create-silent (NodeFactory/createURI "http://graph.org/")]
            (->> [:graph "<http://graph.org/>"]
                 (s/conform ::us/create-silent)
                 (conj [:create-silent])
                 (ast/ast->jena {})))))
   (testing "CLEAR and DROP"
-    (is (= Target/DEFAULT
+    (is (= [:clear Target/DEFAULT]
            (->> :default
                 (s/conform ::us/clear)
                 (conj [:clear])
-                (ast/ast->jena {}))
+                (ast/ast->jena {}))))
+    (is (= [:clear-silent Target/DEFAULT]
            (->> :default
                 (s/conform ::us/clear-silent)
                 (conj [:clear-silent])
                 (ast/ast->jena {}))))
-    (is (= Target/DEFAULT
+    (is (= [:drop Target/DEFAULT]
            (->> :default
                 (s/conform ::us/drop)
                 (conj [:drop])
-                (ast/ast->jena {}))
+                (ast/ast->jena {}))))
+    (is (= [:drop-silent Target/DEFAULT]
            (->> :default
                 (s/conform ::us/drop-silent)
                 (conj [:drop-silent])
                 (ast/ast->jena {})))))
   (testing "MOVE, COPY, and ADD"
-    (is (= graph-target
+    (is (= [:move graph-target]
            (->> [:graph "<http://graph.org/>"]
                 (s/conform ::us/move)
                 (conj [:move])
-                (ast/ast->jena {}))
+                (ast/ast->jena {}))))
+    (is (= [:move-silent graph-target]
            (->> [:graph "<http://graph.org/>"]
                 (s/conform ::us/move-silent)
                 (conj [:move-silent])
                 (ast/ast->jena {}))))
-    (is (= graph-target
+    (is (= [:copy graph-target]
            (->> [:graph "<http://graph.org/>"]
                 (s/conform ::us/copy)
                 (conj [:copy])
-                (ast/ast->jena {}))
+                (ast/ast->jena {}))))
+    (is (= [:copy-silent graph-target]
            (->> [:graph "<http://graph.org/>"]
                 (s/conform ::us/copy-silent)
                 (conj [:copy-silent])
                 (ast/ast->jena {}))))
-    (is (= graph-target
+    (is (= [:add graph-target]
            (->> [:graph "<http://graph.org/>"]
                 (s/conform ::us/add)
                 (conj [:add])
-                (ast/ast->jena {}))
+                (ast/ast->jena {}))))
+    (is (= [:add-silent graph-target]
            (->> [:graph "<http://graph.org/>"]
                 (s/conform ::us/add-silent)
                 (conj [:add-silent])
@@ -131,49 +141,47 @@
 
 (deftest graph-update-test
   (testing "INSERT DATA"
-    (is (= quads-fixture
-           (->> data-fixture
-                (s/conform ::us/insert-data)
-                (conj [:insert-data])
-                ^QuadDataAcc (ast/ast->jena {:prologue prefix-prologue})
-                .getQuads))))
+    (is (= [:insert-data quads-fixture]
+           (-> (->> data-fixture
+                    (s/conform ::us/insert-data)
+                    (conj [:insert-data])
+                    (ast/ast->jena {:prologue prefix-prologue}))
+               (update 1 #(.getQuads ^QuadDataAcc %))))))
   (testing "DELETE DATA"
-    (is (= quads-fixture
-           (->> data-fixture
-                (s/conform ::us/delete-data)
-                (conj [:delete-data])
-                ^QuadDataAcc (ast/ast->jena {:prologue prefix-prologue})
-                .getQuads))))
+    (is (= [:delete-data quads-fixture]
+           (-> (->> data-fixture
+                    (s/conform ::us/delete-data)
+                    (conj [:delete-data])
+                    (ast/ast->jena {:prologue prefix-prologue}))
+               (update 1 #(.getQuads ^QuadDataAcc %))))))
   (testing "DELETE WHERE"
-    (is (= quads-fixture
-           (->> data-fixture
-                (s/conform ::us/delete-where)
-                (conj [:delete-where])
-                ^QuadAcc (ast/ast->jena {:prologue prefix-prologue})
-                .getQuads))))
+    (is (= [:delete-where quads-fixture]
+           (-> (->> data-fixture
+                    (s/conform ::us/delete-where)
+                    (conj [:delete-where])
+                    (ast/ast->jena {:prologue prefix-prologue}))
+               (update 1 #(.getQuads ^QuadAcc %))))))
   (testing "DELETE"
-    (is (= quads-fixture
+    (is (= [:delete quads-fixture]
            (->> data-fixture
                 (s/conform ::us/delete)
                 (conj [:delete])
                 (ast/ast->jena {:prologue prefix-prologue})))))
   (testing "INSERT"
-    (is (= quads-fixture
+    (is (= [:insert quads-fixture]
            (->> data-fixture
                 (s/conform ::us/insert)
                 (conj [:insert])
                 (ast/ast->jena {:prologue prefix-prologue})))))
   (testing "USING"
-    (is (= "http://foo.org/bar"
+    (is (= [:using foo-bar-node]
            (->> :foo/bar
                 (s/conform ::us/using)
                 (conj [:using])
-                ^Node (ast/ast->jena {:prologue prefix-prologue})
-                .getURI))))
+                (ast/ast->jena {:prologue prefix-prologue})))))
   (testing "WITH"
-    (is (= "http://foo.org/bar"
+    (is (= [:with foo-bar-node]
            (->> :foo/bar
                 (s/conform ::us/with)
                 (conj [:with])
-                ^Node (ast/ast->jena {:prologue prefix-prologue})
-                .getURI)))))
+                (ast/ast->jena {:prologue prefix-prologue}))))))

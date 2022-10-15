@@ -129,6 +129,8 @@
 (defunary 'iri E_IRI)
 (defunary 'uri E_IRI)
 
+(defunary 'bound E_Bound)
+
 (defunary 'blank?   E_IsBlank)
 (defunary 'literal? E_IsLiteral)
 (defunary 'numeric? E_IsNumeric)
@@ -155,8 +157,6 @@
 (defunary 'sha384 E_SHA384)
 (defunary 'sha512 E_SHA512)
 
-(defunary 'bound      E_Bound)
-
 ;; Need to define the defmethod bodies manually since the E_Exists and
 ;; E_NotExists constructors are overloaded and require type hitns.
 
@@ -179,7 +179,8 @@
 (defbinary 'strbefore    E_StrBefore)
 (defbinary 'strafter     E_StrAfter)
 
-(defbinary 'sameterm     E_SameTerm)
+(defbinary 'sameterm E_SameTerm)
+
 (defbinary '=    E_Equals)
 (defbinary 'not= E_NotEquals)
 (defbinary '<    E_LessThan)

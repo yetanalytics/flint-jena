@@ -40,38 +40,35 @@
 (defmethod ast/ast-node->jena :update/graph [_ [_ [_graph-k graph-node]]]
   (Target/create ^Node graph-node))
 
-(defmethod ast/ast-node->jena :load [_ [_ ^Node iri-node]]
-  (.getURI iri-node))
-(defmethod ast/ast-node->jena :load-silent [_ [_ ^Node iri-node]]
-  (.getURI iri-node))
+(defmethod ast/ast-node->jena :load [_ [kw ^Node iri-node]]
+  [kw (.getURI iri-node)])
+(defmethod ast/ast-node->jena :load-silent [_ [kw ^Node iri-node]]
+  [kw (.getURI iri-node)])
 
-(defmethod ast/ast-node->jena :into [_ [_ ^Target target]]
-  (.getGraph target))
+(defmethod ast/ast-node->jena :into [_ [kw ^Target target]]
+  [kw (.getGraph target)])
 
-(defmethod ast/ast-node->jena :clear [_ [_ target]] target)
-(defmethod ast/ast-node->jena :clear-silent [_ [_ target]] target)
+(defmethod ast/ast-node->jena :clear [_ clear-target] clear-target)
+(defmethod ast/ast-node->jena :clear-silent [_ clear-target] clear-target)
 
-(defmethod ast/ast-node->jena :drop [_ [_ target]] target)
-(defmethod ast/ast-node->jena :drop-silent [_ [_ target]] target)
+(defmethod ast/ast-node->jena :drop [_ drop-target] drop-target)
+(defmethod ast/ast-node->jena :drop-silent [_ drop-target] drop-target)
 
-(defmethod ast/ast-node->jena :create [_ [_ ^Target target]]
-  (.getGraph target))
-(defmethod ast/ast-node->jena :create-silent [_ [_ ^Target target]]
-  (.getGraph target))
+(defmethod ast/ast-node->jena :create [_ [kw ^Target target]]
+  [kw (.getGraph target)])
+(defmethod ast/ast-node->jena :create-silent [_ [kw ^Target target]]
+  [kw (.getGraph target)])
 
-(defmethod ast/ast-node->jena :add [_ [_ src-target]] src-target)
-(defmethod ast/ast-node->jena :add-silent [_ [_ src-target]] src-target)
+(defmethod ast/ast-node->jena :add [_ src-target] src-target)
+(defmethod ast/ast-node->jena :add-silent [_ src-target] src-target)
 
-(defmethod ast/ast-node->jena :add [_ [_ src-target]] src-target)
-(defmethod ast/ast-node->jena :add-silent [_ [_ src-target]] src-target)
+(defmethod ast/ast-node->jena :move [_ src-target] src-target)
+(defmethod ast/ast-node->jena :move-silent [_ src-target] src-target)
 
-(defmethod ast/ast-node->jena :move [_ [_ src-target]] src-target)
-(defmethod ast/ast-node->jena :move-silent [_ [_ src-target]] src-target)
+(defmethod ast/ast-node->jena :copy [_ src-target] src-target)
+(defmethod ast/ast-node->jena :copy-silent [_ src-target] src-target)
 
-(defmethod ast/ast-node->jena :copy [_ [_ src-target]] src-target)
-(defmethod ast/ast-node->jena :copy-silent [_ [_ src-target]] src-target)
-
-(defmethod ast/ast-node->jena :to [_ [_ dest-target]] dest-target)
+(defmethod ast/ast-node->jena :to [_ dest-target] dest-target)
 
 (defmethod new-update :update/load
   [_ {^String ld :load
@@ -194,27 +191,27 @@
 
 ;; Quad Patterns
 
-(defmethod ast/ast-node->jena :insert-data [_opts [_ elements]]
-  (doto (QuadDataAcc.)
-    (add-quad-elements! elements)))
+(defmethod ast/ast-node->jena :insert-data [_opts [kw elements]]
+  [kw (doto (QuadDataAcc.)
+        (add-quad-elements! elements))])
 
-(defmethod ast/ast-node->jena :delete-data [_opts [_ elements]]
-  (doto (QuadDataAcc.)
-    (add-quad-elements! elements)))
+(defmethod ast/ast-node->jena :delete-data [_opts [kw elements]]
+  [kw (doto (QuadDataAcc.)
+        (add-quad-elements! elements))])
 
-(defmethod ast/ast-node->jena :delete-where [_opts [_ elements]]
-  (doto (QuadAcc.)
-    (add-quad-elements! elements)))
+(defmethod ast/ast-node->jena :delete-where [_opts [kw elements]]
+  [kw (doto (QuadAcc.)
+        (add-quad-elements! elements))])
 
-(defmethod ast/ast-node->jena :delete [_opts [_ elements]]
-  (let [quad-acc (doto (QuadAcc.)
-                   (add-quad-elements! elements))]
-    (.getQuads quad-acc)))
+(defmethod ast/ast-node->jena :delete [_opts [kw elements]]
+  [kw (let [quad-acc (doto (QuadAcc.)
+                       (add-quad-elements! elements))]
+        (.getQuads quad-acc))])
 
-(defmethod ast/ast-node->jena :insert [_opts [_ elements]]
-  (let [quad-acc (doto (QuadAcc.)
-                   (add-quad-elements! elements))]
-    (.getQuads quad-acc)))
+(defmethod ast/ast-node->jena :insert [_opts [kw elements]]
+  [kw (let [quad-acc (doto (QuadAcc.)
+                       (add-quad-elements! elements))]
+        (.getQuads quad-acc))])
 
 ;; Named Graph IRIs
 
@@ -224,11 +221,11 @@
 (defmethod ast/ast-node->jena :update/named-iri [_opts [_ [_ graph-node]]]
   graph-node)
 
-(defmethod ast/ast-node->jena :using [_opts [_ graph-node]]
-  graph-node)
+(defmethod ast/ast-node->jena :using [_opts using-graph]
+  using-graph)
 
-(defmethod ast/ast-node->jena :with [_opts [_ ^Node graph-node]]
-  graph-node)
+(defmethod ast/ast-node->jena :with [_opts with-graph]
+  with-graph)
 
 ;; Update Creation
 
@@ -268,11 +265,11 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn- update->jena* [opts [update-type update-ast]]
-  (let [update-map (reduce (fn [m [ast-k _ :as ast]]
-                             (assoc m ast-k (ast/ast->jena opts ast)))
-                           {}
-                           update-ast)]
-    (new-update update-type update-map)))
+  (->> update-ast
+       (ast/ast->jena opts)
+       (filter (fn [[k _]] (not (#{:base :prefixes} k))))
+       (into {})
+       (new-update update-type)))
 
 (defn create-updates
   [prologue opts update-asts]

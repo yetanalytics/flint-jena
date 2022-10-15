@@ -1,5 +1,4 @@
 (ns com.yetanalytics.flint-jena.select
-  (:require [com.yetanalytics.flint-jena.ast :as ast])
   (:import [org.apache.jena.graph Node]
            [org.apache.jena.query Query]
            [org.apache.jena.sparql.core Var]
@@ -27,18 +26,15 @@
     (run! #(-add-select-result! % query) select-clauses)))
 
 (defn add-select!
-  [^Query query opts select-ast]
-  (let [clauses (ast/ast->jena opts select-ast)]
-    (query-add-selects! query clauses)))
+  [^Query query select-clauses]
+  (query-add-selects! query select-clauses))
 
 (defn add-select-distinct!
-  [^Query query opts select-ast]
-  (let [clauses (ast/ast->jena opts select-ast)]
-    (.setDistinct query true)
-    (query-add-selects! query clauses)))
+  [^Query query select-clauses]
+  (.setDistinct query true)
+  (query-add-selects! query select-clauses))
 
 (defn add-select-reduced!
-  [^Query query opts select-ast]
-  (let [clauses (ast/ast->jena opts select-ast)]
-    (.setReduced query true)
-    (query-add-selects! query clauses)))
+  [^Query query select-clauses]
+  (.setReduced query true)
+  (query-add-selects! query select-clauses))
