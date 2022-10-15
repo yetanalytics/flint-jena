@@ -6,6 +6,7 @@
             [com.yetanalytics.flint-jena.axiom :as ax]
             [com.yetanalytics.flint.spec.where :as ws])
   (:import [org.apache.jena.graph Node NodeFactory Triple]
+           [org.apache.jena.query QueryFactory]
            [org.apache.jena.sparql.core Prologue Var]
            [org.apache.jena.sparql.expr E_Exists]
            [org.apache.jena.sparql.util NodeIsomorphismMap]
@@ -21,6 +22,7 @@
             ElementOptional
             ElementPathBlock
             ElementService
+            ElementSubQuery
             ElementUnion]))
 
 (def prologue
@@ -54,6 +56,12 @@
 
 (deftest where-clause-test
   (testing "WHERE"
+    (is (.equalTo
+         (ElementGroup.)
+         (->> []
+              (s/conform ::ws/where)
+              (ast/ast->jena {:prologue prologue}))
+         (NodeIsomorphismMap.)))
     (is (.equalTo
          (let [t1 (doto (ElementPathBlock.)
                     (.addTriple bar-triple))
@@ -165,4 +173,67 @@
                               :iri->datatype ax/xsd-datatype-map}))
          (NodeIsomorphismMap.)))))
 
-;; TODO: Subquery test
+(def subquery-fix-1
+  (QueryFactory/create
+   "SELECT ?x ?y ?z WHERE { ?x ?y ?z }"))
+
+(def subquery-fix-2
+  (QueryFactory/create
+   "SELECT ?x WHERE { ?x ?y ?z } GROUP BY ?x HAVING (?x = ?z)"))
+
+(def subquery-fix-3
+  (QueryFactory/create
+   "SELECT DISTINCT ?x WHERE { ?x ?y ?z } ORDER BY ASC (?x) LIMIT 100 OFFSET 2"))
+
+(def subquery-fix-4
+  (QueryFactory/create
+   "SELECT REDUCED ?x ?d WHERE { ?x ?y ?z } VALUES ?d { <http://foo.org/bar> }"))
+
+(deftest subquery-test
+  (testing "Subquery"
+    (is (.equalTo
+         (ElementSubQuery. subquery-fix-1)
+         (->> '{:select [?x ?y ?z]
+                :where  [[?x ?y ?z]]}
+              (s/conform ::ws/where)
+              (ast/ast->jena {:prologue prologue}))
+         (NodeIsomorphismMap.)))
+    (is (.equalTo
+         (doto (ElementGroup.)
+           (.addElement (doto (ElementPathBlock.)
+                          (.addTriple bar-triple)))
+           (.addElement (doto (ElementGroup.)
+                          (.addElement (ElementSubQuery. subquery-fix-1)))))
+         (->> '[[?s :foo/bar ?o]
+                [:where {:select [?x ?y ?z]
+                         :where  [[?x ?y ?z]]}]]
+              (s/conform ::ws/where)
+              (ast/ast->jena {:prologue prologue}))
+         (NodeIsomorphismMap.)))
+    (is (.equalTo
+         (ElementSubQuery. subquery-fix-2)
+         (->> '{:select   [?x]
+                :where    [[?x ?y ?z]]
+                :group-by [?x]
+                :having   [(= ?x ?z)]}
+              (s/conform ::ws/where)
+              (ast/ast->jena {:prologue prologue}))
+         (NodeIsomorphismMap.)))
+    (is (.equalTo
+         (ElementSubQuery. subquery-fix-3)
+         (->> '{:select-distinct [?x]
+                :where           [[?x ?y ?z]]
+                :order-by        [(asc ?x)]
+                :limit           100
+                :offset          2}
+              (s/conform ::ws/where)
+              (ast/ast->jena {:prologue prologue}))
+         (NodeIsomorphismMap.)))
+    (is (.equalTo
+         (ElementSubQuery. subquery-fix-4)
+         (->> '{:select-reduced [?x ?d]
+                :where          [[?x ?y ?z]]
+                :values         {?d ["<http://foo.org/bar>"]}}
+              (s/conform ::ws/where)
+              (ast/ast->jena {:prologue prologue}))
+         (NodeIsomorphismMap.)))))

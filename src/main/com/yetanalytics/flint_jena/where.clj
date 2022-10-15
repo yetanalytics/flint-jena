@@ -34,43 +34,43 @@
 (defmethod select-query-add! :default [_ _] nil)
 
 (defmethod select-query-add! :select
-  [^Query query select-ast]
+  [^Query query [_ select-ast]]
   (sel/add-select! query select-ast))
 
 (defmethod select-query-add! :select-distinct
-  [^Query query select-ast]
+  [^Query query [_ select-ast]]
   (sel/add-select-distinct! query select-ast))
 
 (defmethod select-query-add! :select-reduced
-  [^Query query select-ast]
+  [^Query query [_ select-ast]]
   (sel/add-select-reduced! query select-ast))
 
 (defmethod select-query-add! :group-by
-  [query group-by-ast]
+  [query [_ group-by-ast]]
   (mod/add-group-bys! query group-by-ast))
 
 (defmethod select-query-add! :order-by
-  [query order-by-ast]
+  [query [_ order-by-ast]]
   (mod/add-order-bys! query order-by-ast))
 
 (defmethod select-query-add! :having
-  [query having-ast]
+  [query [_ having-ast]]
   (mod/add-having! query having-ast))
 
 (defmethod select-query-add! :limit
-  [query limit-ast]
+  [query [_ limit-ast]]
   (mod/add-limit! query limit-ast))
 
 (defmethod select-query-add! :offset
-  [query offset-ast]
+  [query [_ offset-ast]]
   (mod/add-offset! query offset-ast))
 
 (defmethod select-query-add! :values
-  [query values-ast]
+  [query [_ values-ast]]
   (values/add-values! query values-ast))
 
 (defmethod select-query-add! :where
-  [query where-ast]
+  [query [_ where-ast]]
   (add-where! query where-ast))
 
 (defn- create-query
@@ -96,17 +96,17 @@
           elements)
     group-element))
 
+(defmethod ast/ast-node->jena :where/recurse
+  [_ [_ element]]
+  (let [group-element (ElementGroup.)]
+    (.addElement group-element element)
+    group-element))
+
 (defmethod ast/ast-node->jena :where/union
   [_ [_ elements]]
   (let [union-element (ElementUnion.)]
     (run! (fn [element] (.addElement union-element element))
           elements)
-    union-element))
-
-(defmethod ast/ast-node->jena :where/recurse
-  [_ [_ element]]
-  (let [union-element (ElementUnion.)]
-    (.addElement union-element element)
     union-element))
 
 (defmethod ast/ast-node->jena :where/optional
