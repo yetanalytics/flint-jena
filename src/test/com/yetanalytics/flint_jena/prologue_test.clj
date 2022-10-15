@@ -14,7 +14,8 @@
     (let [base-uri (->> "<http://base-uri.com/>"
                         (s/conform ::ps/base)
                         (conj [:base])
-                        (ast/ast->jena {}))
+                        (ast/ast->jena {})
+                        second)
           prologue (doto (Prologue.)
                      (.setBaseURI base-uri))]
       (is (= "http://base-uri.com/" base-uri))
@@ -25,7 +26,8 @@
                                    :$   "<http://bar-uri.com/>"}
                                   (s/conform ::ps/prefixes)
                                   (conj [:prefixes])
-                                  (ast/ast->jena {}))
+                                  (ast/ast->jena {})
+                                  second)
           ^Prologue prologue (doto (Prologue.)
                                (.setPrefixMapping pm))]
       (is (= {"foo" "http://foo-uri.com/"
