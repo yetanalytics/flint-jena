@@ -1,0 +1,11 @@
+;; DELETE DATA with different PREFIXes
+[{:prefixes    {:dc0 "<http://purl.org/dc/elements/1.0/>"}
+  :delete-data [[:graph "<http://example/bookStore>"
+                 [["<http://example/book1>"
+                   :dc0/title
+                   "Fundamentals of Compiler Desing"]]]]}
+ {:prefixes    {:dc1 "<http://purl.org/dc/elements/1.1/>"}
+  :delete-data [[:graph "<http://example/bookStore>"
+                 [["<http://example/book1>"
+                   :dc1/title
+                   "Fundamentals of Compiler Desing"]]]]}]
