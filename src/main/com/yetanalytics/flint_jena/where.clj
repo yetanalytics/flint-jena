@@ -98,9 +98,12 @@
 
 (defmethod ast/ast-node->jena :where/recurse
   [_ [_ element]]
-  (let [group-element (ElementGroup.)]
-    (.addElement group-element element)
-    group-element))
+  ;; A recurse should be rare enough that reflection is ok performance-wise.
+  (if (instance? ElementSubQuery element)
+    element
+    (let [group-element (ElementGroup.)]
+      (.addElement group-element element)
+      group-element)))
 
 (defmethod ast/ast-node->jena :where/union
   [_ [_ elements]]
