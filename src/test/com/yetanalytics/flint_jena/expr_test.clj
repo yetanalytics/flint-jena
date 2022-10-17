@@ -132,14 +132,17 @@
       "(|| (|| ?a ?b) ?c)" '(or ?a ?b ?c)
       "(in ?x ?a ?b ?c)"   '(in ?x ?a ?b ?c)
       "(notin ?x ?a ?b)"   '(not-in ?x ?a ?b))
-    (is (= "Expression 'and' cannot have less than 2 arguments!"
-           (try (->> '[:expr/branch
-                       [[:expr/op and]
-                        [:expr/args [[:expr/terminal [:ax/var ?x]]]]]]
-                     (ast/ast->jena {:prologue      prologue
-                                     :iri->datatype ax/xsd-datatype-map}))
-                (catch IllegalArgumentException e
-                  (.getMessage e))))))
+    (are [op]
+         (= (format "Expression '%s' cannot have less than 2 arguments!" op)
+            (try (ast/ast->jena
+                  {:prologue      prologue
+                   :iri->datatype ax/xsd-datatype-map}
+                  [:expr/branch
+                   [[:expr/op op]
+                    [:expr/args '[[:expr/terminal [:ax/var ?x]]]]]])
+                 (catch IllegalArgumentException e
+                   (.getMessage e))))
+      '+ '- '* '/ 'and 'or))
   (testing "Misc-arity expressions"
     (are [expr-str expr]
          (= expr-str
