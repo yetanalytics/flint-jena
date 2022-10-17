@@ -18,7 +18,7 @@
             UpdateDataInsert
             UpdateDataDelete
             UpdateDeleteWhere
-            UpdateDeleteInsert
+            UpdateModify
             ;; Miscellaneous
             QuadAcc
             QuadDataAcc
@@ -218,7 +218,7 @@
 (defmethod ast/ast-node->jena :update/iri [_opts [_ graph-node]]
   graph-node)
 
-(defmethod ast/ast-node->jena :update/named-iri [_opts [_ [_ graph-node]]]
+(defmethod ast/ast-node->jena :update/named-iri [_opts [_ graph-node]]
   graph-node)
 
 (defmethod ast/ast-node->jena :using [_opts using-graph]
@@ -243,22 +243,24 @@
 
 (defmethod new-update :update/modify
   [_ {:keys [delete insert where with using]}]
-  (let [update (UpdateDeleteInsert.)
-        d-acc  (.getDeleteAcc update)
-        i-acc  (.getInsertAcc update)]
+  (let [update-obj (UpdateModify.)
+        delete-acc (.getDeleteAcc update-obj)
+        insert-acc (.getInsertAcc update-obj)]
     (when (not-empty delete)
-      (run! (fn [del] (.addQuad d-acc del)) delete)
-      (.setHasDeleteClause update true))
+      (run! (fn [del] (.addQuad delete-acc del)) delete)
+      (.setHasDeleteClause update-obj true))
     (when (not-empty insert)
-      (run! (fn [ins] (.addQuad i-acc ins)) insert)
-      (.setHasInsertClause update true))
+      (run! (fn [ins] (.addQuad insert-acc ins)) insert)
+      (.setHasInsertClause update-obj true))
     (when (some? where)
-      (.setElement update where))
-    (when (some? using)
-      (.addUsing update using))
+      (.setElement update-obj where))
     (when (some? with)
-      (.setWithIRI update with))
-    update))
+      (.setWithIRI update-obj with))
+    (when (some? using)
+      (if (vector? using)
+        (.addUsingNamed update-obj (second using))
+        (.addUsing update-obj using)))
+    update-obj))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Putting it all together

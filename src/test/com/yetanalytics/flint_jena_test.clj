@@ -173,35 +173,54 @@
     :where    [[:foo/subj ?pred ?obj]]
     :with     :foo/graph})
 
-;; FIXME: equality comparison
 (deftest update-create-test
   (testing "LOAD update"
-    (is (some? (create-update load-update-fix)))
-    (is (some? (create-update load-silent-update-fix))))
+    (is (.equalTo (format-update load-update-fix)
+                  (create-update load-update-fix)))
+    (is (.equalTo (format-update load-silent-update-fix)
+                  (create-update load-silent-update-fix))))
   (testing "CREATE update"
-    (is (some? (create-update create-update-fix)))
-    (is (some? (create-update create-silent-update-fix))))
+    (is (.equalTo (format-update create-update-fix)
+                  (create-update create-update-fix)))
+    (is (.equalTo (format-update create-silent-update-fix)
+                  (create-update create-silent-update-fix))))
   (testing "CLEAR update"
-    (is (some? (create-update clear-update-fix)))
-    (is (some? (create-update clear-silent-update-fix))))
+    (is (.equalTo (format-update clear-update-fix)
+                  (create-update clear-update-fix)))
+    (is (.equalTo (format-update clear-silent-update-fix)
+                  (create-update clear-silent-update-fix))))
   (testing "DROP update"
-    (is (some? (create-update drop-update-fix)))
-    (is (some? (create-update drop-silent-update-fix))))
+    (is (.equalTo (format-update drop-update-fix)
+                  (create-update drop-update-fix)))
+    (is (.equalTo (format-update drop-silent-update-fix)
+                  (create-update drop-silent-update-fix))))
   (testing "COPY update"
-    (is (some? (create-update copy-update-fix)))
-    (is (some? (create-update copy-silent-update-fix))))
+    (is (.equalTo (format-update copy-update-fix)
+                  (create-update copy-update-fix)))
+    (is (.equalTo (format-update copy-silent-update-fix)
+                  (create-update copy-silent-update-fix))))
   (testing "MOVE update"
-    (is (some? (create-update move-update-fix)))
-    (is (some? (create-update move-silent-update-fix))))
+    (is (.equalTo (format-update move-update-fix)
+                  (create-update move-update-fix)))
+    (is (.equalTo (format-update move-silent-update-fix)
+                  (create-update move-silent-update-fix))))
   (testing "ADD update"
-    (is (some? (create-update add-update-fix)))
-    (is (some? (create-update add-silent-update-fix))))
+    (is (.equalTo (format-update add-update-fix)
+                  (create-update add-update-fix)))
+    (is (.equalTo (format-update add-silent-update-fix)
+                  (create-update add-silent-update-fix))))
   (testing "INSERT DATA update"
-    (is (some? (create-update insert-data-update-fix))))
+    (is (.equalTo (format-update insert-data-update-fix)
+                  (create-update insert-data-update-fix))))
   (testing "DELETE DATA update"
-    (is (some? (create-update delete-data-update-fix))))
+    (is (.equalTo (format-update delete-data-update-fix)
+                  (create-update delete-data-update-fix))))
   (testing "DELETE WHERE update"
-    (is (some? (create-update delete-where-update-fix))))
+    (is (.equalTo (format-update delete-where-update-fix)
+                  (create-update delete-where-update-fix))))
   (testing "DELETE/INSERT update"
-    (is (some? (create-update delete-insert-update-fix-1)))
-    (is (some? (create-update delete-insert-update-fix-2)))))
+    (is (.equalTo (format-update delete-insert-update-fix-1)
+                  (create-update delete-insert-update-fix-1)))
+    (is (.equalTo (create-update delete-insert-update-fix-2)
+                  (create-update delete-insert-update-fix-2)))))
+
