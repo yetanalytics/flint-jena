@@ -21,7 +21,7 @@
 
 (def select-query-fix-2
   '{:prefixes {:foo "<http://foo.org/>"}
-    :select   [?x]
+    :select   [?x [?x ?xx]]
     :from     [:foo/graph]
     :where    [[?x :foo/pred ?z]]
     :group-by [?x]
