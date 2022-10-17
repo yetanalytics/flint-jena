@@ -9,6 +9,7 @@
            [org.apache.jena.graph Node]
            [org.apache.jena.query Query]
            [org.apache.jena.sparql.syntax
+            ElementGroup
             ElementPathBlock
             Template
             TripleCollectorBGP]))
@@ -30,12 +31,12 @@
 
 (defmethod query-add! :from
   [^Query query [_ iri-node]]
-  (.addGraphURI query (.getURI iri-node)))
+  (.addGraphURI query (.getURI ^Node iri-node)))
 
 (defmethod query-add! :from-named
   [^Query query [_ iri-nodes]]
-  (run! (fn [^Node iri-node]
-          (.addNamedGraphURI query (.getURI iri-node)))
+  (run! (fn [iri-node]
+          (.addNamedGraphURI query (.getURI ^Node iri-node)))
         iri-nodes))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -137,9 +138,24 @@
   [query [_ values-ast]]
   (values/add-values! query values-ast))
 
+;; In case the CONSTRUCT clause is empty
+;; This should always be called after the CONSTRUCT since the AST is sorted
+(defn- add-where-as-construct!
+  [^Query query where-ast]
+  (when (and (.isConstructType query)
+             (-> query .getConstructTemplate .getTriples not-empty nil?))
+    (try (->> (.getElements ^ElementGroup where-ast)
+              elements->nopath-triples
+              Template.
+              (.setConstructTemplate query))
+         (catch Exception _
+           (throw (IllegalArgumentException.
+                   "CONSTRUCT WHERE must only consist of Basic Graph Patterns!"))))))
+
 (defmethod query-add! :where
   [query [_ where-ast]]
-  (where/add-where! query where-ast))
+  (where/add-where! query where-ast)
+  (add-where-as-construct! query where-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Putting it all together
