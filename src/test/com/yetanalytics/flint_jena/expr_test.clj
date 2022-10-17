@@ -88,7 +88,17 @@
       "(SHA384 \"x\")"      '(sha384 "x")
       "(SHA512 \"x\")"      '(sha512 "x")
       "(bound ?x)"          '(bound ?x)))
-      ;; TODO: exists and not-exists exprs
+  (testing "Unary WHERE expressions"
+    (are [expr-str expr]
+         (= expr-str
+            (expr->str expr)
+            (agg-expr->str expr))
+      ;; EXISTS
+      "(exists (bgp (triple ?x <http://foo.org/> ?y)))"
+      '(exists [[?x "<http://foo.org/>" ?y]])
+      ;; NOT EXISTS
+      "(notexists (bgp (triple ?x <http://foo.org/> ?y)))"
+      '(not-exists [[?x "<http://foo.org/>" ?y]])))
   (testing "Binary expressions"
     (are [expr-str expr]
          (= expr-str
