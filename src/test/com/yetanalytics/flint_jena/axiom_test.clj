@@ -90,14 +90,31 @@
            (->> [:ax/literal 200]
                 ^Node (ast/ast->jena {:iri->datatype ax/xsd-datatype-map})
                 .getLiteralValue)))
-    (is (= "http://www.w3.org/2001/XMLSchema#double"
-           (->> [:ax/literal 3.14]
+    (is (= 3.0
+           (->> [:ax/literal 3.0]
                 ^Node (ast/ast->jena {:iri->datatype ax/xsd-datatype-map})
-                .getLiteralDatatypeURI)))
+                .getLiteralValue)))
     (is (= "1970-01-01T00:00:00Z"
            (->> [:ax/literal (java.time.Instant/EPOCH)]
                 ^Node (ast/ast->jena {:iri->datatype ax/xsd-datatype-map})
-                .getLiteralLexicalForm))))
+                .getLiteralLexicalForm)))
+    (testing "- differences between datatype maps"
+      (is (= "http://www.w3.org/2001/XMLSchema#integer"
+             (->> [:ax/literal 200]
+                  ^Node (ast/ast->jena {:iri->datatype ax/xsd-datatype-map})
+                  .getLiteralDatatypeURI)))
+      (is (= "http://www.w3.org/2001/XMLSchema#long"
+             (->> [:ax/literal 200]
+                  ^Node (ast/ast->jena {:iri->datatype ax/xsd-datatype-map*})
+                  .getLiteralDatatypeURI)))
+      (is (= "http://www.w3.org/2001/XMLSchema#decimal"
+             (->> [:ax/literal 3.0]
+                  ^Node (ast/ast->jena {:iri->datatype ax/xsd-datatype-map})
+                  .getLiteralDatatypeURI)))
+      (is (= "http://www.w3.org/2001/XMLSchema#double"
+             (->> [:ax/literal 3.0]
+                  ^Node (ast/ast->jena {:iri->datatype ax/xsd-datatype-map*})
+                  .getLiteralDatatypeURI)))))
   (testing "Numeric Literal"
     (is (= 200
            (->> [:ax/numeric 200]

@@ -3,6 +3,7 @@
             [com.yetanalytics.flint.axiom.protocol :as p]
             [com.yetanalytics.flint.axiom.impl])
   (:import [java.util UUID]
+           [org.apache.jena.atlas.lib EscapeStr]
            [org.apache.jena.graph BlankNodeId NodeFactory]
            [org.apache.jena.irix IRIx]
            [org.apache.jena.sparql.core Prologue Var]
@@ -26,16 +27,16 @@
    XSDDatatype/XSDpositiveInteger
    XSDDatatype/XSDnegativeInteger
    ;; Numeric types
-   XSDDatatype/XSDbyte
-   XSDDatatype/XSDunsignedByte
    XSDDatatype/XSDdouble
    XSDDatatype/XSDfloat
-   XSDDatatype/XSDlong
-   XSDDatatype/XSDunsignedInt
-   XSDDatatype/XSDunsignedShort
-   XSDDatatype/XSDunsignedLong
-   XSDDatatype/XSDint
+   XSDDatatype/XSDbyte
    XSDDatatype/XSDshort
+   XSDDatatype/XSDint
+   XSDDatatype/XSDlong
+   XSDDatatype/XSDunsignedByte
+   XSDDatatype/XSDunsignedShort
+   XSDDatatype/XSDunsignedInt
+   XSDDatatype/XSDunsignedLong
    ;; Booleans and hexes
    XSDDatatype/XSDboolean
    XSDDatatype/XSDbase64Binary
@@ -70,14 +71,42 @@
    XSDDatatype/XSDIDREF])
 
 (defn- register-datatype
-  [datatype-m ^RDFDatatype datatype]
-  (let [datatype-iri (->> datatype .getURI (format "<%s>"))]
-    (assoc datatype-m datatype-iri datatype)))
+  ([datatype-m ^RDFDatatype datatype]
+   (let [datatype-iri (->> datatype .getURI (format "<%s>"))]
+     (assoc datatype-m datatype-iri datatype)))
+  ([datatype-m ^RDFDatatype datatype mapped-datatype]
+   (let [datatype-iri (->> datatype .getURI (format "<%s>"))]
+     (assoc datatype-m datatype-iri mapped-datatype))))
+
+(def xsd-datatype-map*
+  "A mapping from all XSD datatype IRIs to their respective `RDFDatatype`
+   instances. Unlike a `xsd-datatype-map`, all IRIs are mapped to their
+   datatypes without overrides."
+  (reduce register-datatype {} xsd-datatypes))
 
 (def xsd-datatype-map
   "A mapping from all XSD datatype IRIs to their respective `RDFDatatype`
-   instances."
-  (reduce register-datatype {} xsd-datatypes))
+   instances. All numeric type IRIs are mapped to either `XSDinteger` or
+   `XSDdecimal`, to match how the Jena parser assigns numeric literal types."
+  (let [register-integers (partial reduce
+                                   #(register-datatype %1
+                                                       %2
+                                                       XSDDatatype/XSDinteger))
+        register-decimals (partial reduce
+                                   #(register-datatype %1
+                                                       %2
+                                                       XSDDatatype/XSDdecimal))]
+    (-> xsd-datatype-map*
+        (register-integers [XSDDatatype/XSDbyte
+                            XSDDatatype/XSDshort
+                            XSDDatatype/XSDint
+                            XSDDatatype/XSDlong
+                            XSDDatatype/XSDunsignedByte
+                            XSDDatatype/XSDunsignedShort
+                            XSDDatatype/XSDunsignedInt
+                            XSDDatatype/XSDunsignedLong])
+        (register-decimals [XSDDatatype/XSDfloat
+                            XSDDatatype/XSDdouble]))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Node Axioms
@@ -114,23 +143,29 @@
       (-> (UUID/randomUUID) str BlankNodeId. NodeFactory/createBlankNode)
       (-> bnode-str (.substring 2) BlankNodeId. NodeFactory/createBlankNode))))
 
+(defn- iri->dt
+  [iri->datatype dt-iri]
+  (try (iri->datatype dt-iri)
+       (catch Exception _
+         (throw (IllegalArgumentException.
+                 (format "Datatype cannot be retrieved for IRI '%s'."
+                         dt-iri))))))
+
 (defmethod ast/ast-node->jena :ax/literal
   [{:keys [iri->datatype]} [_ literal]]
-  (let [^String strval (p/-format-literal-strval literal)
-        ?literal-ltag  (p/-format-literal-lang-tag literal)
-        ?literal-iri   (p/-format-literal-url literal)
-        iri->dt
-        (fn [dt-iri]
-          (try (iri->datatype dt-iri)
-               (catch Exception _
-                 (throw (IllegalArgumentException.
-                         (format "Datatype cannot be retrieved for IRI '%s'."
-                                 dt-iri))))))]
+  (let [^String strval (-> literal
+                           p/-format-literal-strval
+                           (EscapeStr/unescape \\ false))
+        ?literal-ltag  (-> literal
+                           p/-format-literal-lang-tag)
+        ?literal-dtype (some->> literal
+                                p/-format-literal-url
+                                (iri->dt iri->datatype))]
     (cond
       (some? ?literal-ltag)
       (NodeFactory/createLiteral strval ^String ?literal-ltag)
-      (some? ?literal-iri)
-      (NodeFactory/createLiteral strval ^RDFDatatype (iri->dt ?literal-iri))
+      (some? ?literal-dtype)
+      (NodeFactory/createLiteral strval ^RDFDatatype ?literal-dtype)
       :else
       (NodeFactory/createLiteral strval))))
 
