@@ -50,8 +50,9 @@
             :as   opts}]
   (let [query-ast (conform-query spec-ed? query)
         prologue  (pro/create-prologue opts query-ast)
-        opts*     (merge opts {:prologue      prologue
-                               :iri->datatype ax/xsd-datatype-map})]
+        opts*     (merge {:prologue      prologue
+                          :iri->datatype ax/xsd-datatype-map}
+                         opts)]
     (qu/create-query prologue opts* query-ast)))
 
 (defn create-updates
@@ -60,8 +61,9 @@
               :as   opts}]
   (let [update-asts (map #(conform-update spec-ed? %) updates)
         prologue    (pro/create-prologue opts (first update-asts))
-        opts*       (merge opts {:prologue      prologue
-                                 :iri->datatype ax/xsd-datatype-map})]
+        opts*       (merge {:prologue      prologue
+                            :iri->datatype ax/xsd-datatype-map}
+                           opts)]
     (up/create-updates prologue opts* update-asts)))
 
 (defn create-update
