@@ -89,21 +89,16 @@
 ;; WHERE clauses
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defmethod ast/ast-node->jena :where/recurse
+  [_ [_ element]]
+  element)
+
 (defmethod ast/ast-node->jena :where-sub/where
   [_ [_ elements]]
   (let [group-element (ElementGroup.)]
     (run! (fn [element] (.addElement group-element element))
           elements)
     group-element))
-
-(defmethod ast/ast-node->jena :where/recurse
-  [_ [_ element]]
-  ;; A recurse should be rare enough that reflection is ok performance-wise.
-  (if (instance? ElementSubQuery element)
-    element
-    (let [group-element (ElementGroup.)]
-      (.addElement group-element element)
-      group-element)))
 
 (defmethod ast/ast-node->jena :where/union
   [_ [_ elements]]
