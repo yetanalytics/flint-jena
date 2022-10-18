@@ -7,7 +7,9 @@
             [com.yetanalytics.flint.spec.query    :as qs]
             [com.yetanalytics.flint.spec.prologue :as ps])
   (:import [org.apache.jena.shared PrefixMapping]
-           [org.apache.jena.sparql.core Prologue]))
+           [org.apache.jena.sparql.core Prologue]
+           [org.apache.jena.query Query]
+           [org.apache.jena.update UpdateRequest]))
 
 (deftest prologue-test
   (testing "Prologue BASE"
@@ -63,7 +65,27 @@
       (is (= "http://foo-uri.com/suffix"
              (-> prologue (.expandPrefixedName "foo:suffix"))))
       (is (= "http://bar-uri.com/suffix"
-             (-> prologue (.expandPrefixedName ":suffix"))))))
+             (-> prologue (.expandPrefixedName ":suffix"))))
+      ;; Test prologue addition
+      (testing "- on query"
+        (let [^Query query (pro/add-prologue! (Query.) prologue)]
+          (is (= "http://foo-uri.com/"
+                 (.getPrefix query "foo")))
+          (is (= "http://bar-uri.com/"
+                 (.getPrefix query "")))
+          (is (= "http://base-uri.com/"
+                 (.getBaseURI query)))
+          (is (.explicitlySetBaseURI query))))
+      (testing "- on update"
+        (let [^UpdateRequest updates (pro/add-prologue! (UpdateRequest.)
+                                                        prologue)]
+          (is (= "http://foo-uri.com/"
+                 (.getPrefix updates "foo")))
+          (is (= "http://bar-uri.com/"
+                 (.getPrefix updates "")))
+          (is (= "http://base-uri.com/"
+                 (.getBaseURI updates)))
+          (is (.explicitlySetBaseURI updates))))))
   (testing "Prologue with BASE only"
     (let [^Prologue prologue
           (->> {:base  "<http://base-uri.com/>"

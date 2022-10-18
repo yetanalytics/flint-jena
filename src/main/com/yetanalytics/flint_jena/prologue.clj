@@ -48,5 +48,5 @@
 (defn add-prologue!
   [^Prologue query-or-updates ^Prologue prologue]
   (doto query-or-updates
-    (.setBase (.getBase prologue))
+    (.setBaseURI (.getBaseURI prologue))
     (.setPrefixMapping (.getPrefixMapping prologue))))

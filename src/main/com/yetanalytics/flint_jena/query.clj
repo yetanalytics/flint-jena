@@ -2,6 +2,7 @@
   (:require [com.yetanalytics.flint-jena.ast :as ast]
             [com.yetanalytics.flint-jena.expr]
             [com.yetanalytics.flint-jena.modifier :as mod]
+            [com.yetanalytics.flint-jena.prologue :as pro]
             [com.yetanalytics.flint-jena.select   :as sel]
             [com.yetanalytics.flint-jena.values   :as values]
             [com.yetanalytics.flint-jena.where    :as where])
@@ -178,6 +179,7 @@
 
 (defn create-query
   [prologue opts [query-type query-ast]]
-  (doto (Query. prologue)
+  (doto (Query.)
+    (pro/add-prologue! prologue)
     (set-query-type! query-type)
     (add-query-clauses! opts query-ast)))
