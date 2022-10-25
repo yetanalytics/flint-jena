@@ -1,9 +1,14 @@
 (ns com.yetanalytics.flint-jena-test
-  (:require [clojure.test :refer [deftest testing is]]
+  (:require [clojure.test                :refer [deftest testing is]]
+            [clojure.edn                 :as edn]
+            [clojure.java.io             :as io]
             [com.yetanalytics.flint      :as flint]
-            [com.yetanalytics.flint-jena :refer [create-query create-update]])
-  (:import [org.apache.jena.query QueryFactory]
-           [org.apache.jena.update UpdateFactory]))
+            [com.yetanalytics.flint-jena :refer [create-query
+                                                 create-updates
+                                                 create-update]])
+  (:import [java.io File]
+           [org.apache.jena.query QueryFactory]
+           [org.apache.jena.update UpdateFactory UpdateRequest]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Query tests
@@ -89,13 +94,33 @@
     (is (= (format-query ask-query-fix)
            (create-query ask-query-fix)))))
 
+(comment
+  (require '[criterium.core :as crit])
+
+  (crit/quick-bench
+   (format-query select-query-fix-1))
+  (crit/quick-bench
+   (create-query select-query-fix-1))
+  
+  (dotimes [_ 10000]
+    (create-query select-query-fix-1))
+  )
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Update tests
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn- eq-update
+  [^UpdateRequest u1 ^UpdateRequest u2]
+  (.equalTo u1 u2))
+
 (defn- format-update
   [update]
   (UpdateFactory/create ^String (flint/format-update update)))
+
+(defn- format-updates
+  [updates]
+  (UpdateFactory/create ^String (flint/format-updates updates)))
 
 (def load-update-fix
   '{:load "<http://foo.org/graph-1>"
@@ -175,52 +200,92 @@
 
 (deftest update-create-test
   (testing "LOAD update"
-    (is (.equalTo (format-update load-update-fix)
-                  (create-update load-update-fix)))
-    (is (.equalTo (format-update load-silent-update-fix)
-                  (create-update load-silent-update-fix))))
+    (is (eq-update (format-update load-update-fix)
+                   (create-update load-update-fix)))
+    (is (eq-update (format-update load-silent-update-fix)
+                   (create-update load-silent-update-fix))))
   (testing "CREATE update"
-    (is (.equalTo (format-update create-update-fix)
-                  (create-update create-update-fix)))
-    (is (.equalTo (format-update create-silent-update-fix)
-                  (create-update create-silent-update-fix))))
+    (is (eq-update (format-update create-update-fix)
+                   (create-update create-update-fix)))
+    (is (eq-update (format-update create-silent-update-fix)
+                   (create-update create-silent-update-fix))))
   (testing "CLEAR update"
-    (is (.equalTo (format-update clear-update-fix)
-                  (create-update clear-update-fix)))
-    (is (.equalTo (format-update clear-silent-update-fix)
-                  (create-update clear-silent-update-fix))))
+    (is (eq-update (format-update clear-update-fix)
+                   (create-update clear-update-fix)))
+    (is (eq-update (format-update clear-silent-update-fix)
+                   (create-update clear-silent-update-fix))))
   (testing "DROP update"
-    (is (.equalTo (format-update drop-update-fix)
-                  (create-update drop-update-fix)))
-    (is (.equalTo (format-update drop-silent-update-fix)
-                  (create-update drop-silent-update-fix))))
+    (is (eq-update (format-update drop-update-fix)
+                   (create-update drop-update-fix)))
+    (is (eq-update (format-update drop-silent-update-fix)
+                   (create-update drop-silent-update-fix))))
   (testing "COPY update"
-    (is (.equalTo (format-update copy-update-fix)
-                  (create-update copy-update-fix)))
-    (is (.equalTo (format-update copy-silent-update-fix)
-                  (create-update copy-silent-update-fix))))
+    (is (eq-update (format-update copy-update-fix)
+                   (create-update copy-update-fix)))
+    (is (eq-update (format-update copy-silent-update-fix)
+                   (create-update copy-silent-update-fix))))
   (testing "MOVE update"
-    (is (.equalTo (format-update move-update-fix)
-                  (create-update move-update-fix)))
-    (is (.equalTo (format-update move-silent-update-fix)
-                  (create-update move-silent-update-fix))))
+    (is (eq-update (format-update move-update-fix)
+                   (create-update move-update-fix)))
+    (is (eq-update (format-update move-silent-update-fix)
+                   (create-update move-silent-update-fix))))
   (testing "ADD update"
-    (is (.equalTo (format-update add-update-fix)
-                  (create-update add-update-fix)))
-    (is (.equalTo (format-update add-silent-update-fix)
-                  (create-update add-silent-update-fix))))
+    (is (eq-update (format-update add-update-fix)
+                   (create-update add-update-fix)))
+    (is (eq-update (format-update add-silent-update-fix)
+                   (create-update add-silent-update-fix))))
   (testing "INSERT DATA update"
-    (is (.equalTo (format-update insert-data-update-fix)
-                  (create-update insert-data-update-fix))))
+    (is (eq-update (format-update insert-data-update-fix)
+                   (create-update insert-data-update-fix))))
   (testing "DELETE DATA update"
-    (is (.equalTo (format-update delete-data-update-fix)
-                  (create-update delete-data-update-fix))))
+    (is (eq-update (format-update delete-data-update-fix)
+                   (create-update delete-data-update-fix))))
   (testing "DELETE WHERE update"
-    (is (.equalTo (format-update delete-where-update-fix)
-                  (create-update delete-where-update-fix))))
+    (is (eq-update (format-update delete-where-update-fix)
+                   (create-update delete-where-update-fix))))
   (testing "DELETE/INSERT update"
-    (is (.equalTo (format-update delete-insert-update-fix-1)
-                  (create-update delete-insert-update-fix-1)))
-    (is (.equalTo (create-update delete-insert-update-fix-2)
-                  (create-update delete-insert-update-fix-2)))))
+    (is (eq-update (format-update delete-insert-update-fix-1)
+                   (create-update delete-insert-update-fix-1)))
+    (is (eq-update (create-update delete-insert-update-fix-2)
+                   (create-update delete-insert-update-fix-2)))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Integration tests
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- read-files
+  [directory]
+  (->> directory
+       io/file
+       file-seq
+       (filter #(.isFile ^File %))
+       (mapv (fn [f]
+               {:name (.getName ^File f)
+                :edn  (edn/read-string (slurp f))}))))
+
+(defn- update=
+  [update-request-1 update-request-2]
+  (.equalTo ^UpdateRequest update-request-1
+            ^UpdateRequest update-request-2))
+
+(defmacro make-query-tests [test-dir]
+  `(testing "Jena query from file:"
+     ~@(map (fn [{name# :name edn# :edn}]
+              `(testing ~name#
+                 (is (= (-> (quote ~edn#) format-query)
+                        (-> (quote ~edn#) create-query)))))
+            (read-files test-dir))))
+
+(defmacro make-update-tests [test-dir]
+  `(testing "Jena update from file:"
+     ~@(map (fn [{name# :name edn# :edn}]
+              `(testing ~name#
+                 (is (update= (-> (quote ~edn#) format-updates)
+                              (-> (quote ~edn#) create-updates)))))
+            (read-files test-dir))))
+
+(deftest query-tests
+  (make-query-tests "dev-resources/test-fixtures/query"))
+
+(deftest update-tests
+  (make-update-tests "dev-resources/test-fixtures/update"))
