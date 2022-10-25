@@ -55,16 +55,39 @@
                          opts)]
     (qu/create-query prologue opts* query-ast)))
 
+(defn- conj-prologue
+  [opts prologue-coll update-ast]
+  (if-some [prev-pro (last prologue-coll)]
+    (let [next-pro  (pro/create-prologue opts update-ast)
+          next-pro* (pro/merge-prologues prev-pro next-pro)]
+      (conj prologue-coll next-pro*))
+    (let [next-pro (pro/create-prologue opts update-ast)]
+      (conj prologue-coll next-pro))))
+
+(defn- merge-opts
+  [opts prologue]
+  (merge {:prologue      prologue
+          :iri->datatype ax/xsd-datatype-map}
+         opts))
+
+(defn- ->update-map
+  [prologue opts update-ast]
+  {:prologue   prologue
+   :opts       opts
+   :update-ast update-ast})
+
 (defn create-updates
   [updates & {:keys [spec-ed?]
               :or   {spec-ed? false}
               :as   opts}]
   (let [update-asts (map #(conform-update spec-ed? %) updates)
-        prologue    (pro/create-prologue opts (first update-asts))
-        opts*       (merge {:prologue      prologue
-                            :iri->datatype ax/xsd-datatype-map}
-                           opts)]
-    (up/create-updates prologue opts* update-asts)))
+        prologues   (reduce (partial conj-prologue opts)
+                            []
+                            update-asts)
+        opts-coll   (map (partial merge-opts opts)
+                         prologues)
+        update-coll (mapv ->update-map prologues opts-coll update-asts)]
+    (up/create-updates update-coll)))
 
 (defn create-update
   [update & {:keys [spec-ed?]

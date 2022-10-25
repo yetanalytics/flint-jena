@@ -273,11 +273,15 @@
        (into {})
        (new-update update-type)))
 
+(defn- add-update!
+  [^UpdateRequest update-req {:keys [prologue opts update-ast]}]
+  (doto update-req
+    (pro/add-prologue! prologue)
+    (.add ^Update (update->jena* opts update-ast))))
+
 (defn create-updates
-  [prologue opts update-asts]
-  (let [updates      (mapv #(update->jena* opts %) update-asts)
-        add-updates! (fn [^UpdateRequest update-req updates]
-                       (run! (fn [^Update up] (.add update-req up)) updates))]
-    (doto (UpdateRequest.)
-      (pro/add-prologue! prologue)
-      (add-updates! updates))))
+  [update-map-coll]
+  (let [update-req (UpdateRequest.)
+        add-update (partial add-update! update-req)]
+    (run! add-update update-map-coll)
+    update-req))
