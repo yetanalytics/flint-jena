@@ -1,13 +1,14 @@
 (ns com.yetanalytics.flint-jena-test
-  (:require [clojure.test                :refer [deftest testing is]]
-            [clojure.edn                 :as edn]
-            [clojure.java.io             :as io]
-            [com.yetanalytics.flint      :as flint]
-            [com.yetanalytics.flint-jena :refer [create-query
-                                                 create-updates
-                                                 create-update]])
+  (:require [clojure.test                  :refer [deftest testing is]]
+            [clojure.edn                   :as edn]
+            [clojure.java.io               :as io]
+            [com.yetanalytics.flint        :as flint]
+            [com.yetanalytics.flint-jena   :refer [create-query
+                                                   create-updates
+                                                   create-update]]
+            [com.yetanalytics.test-support :as support])
   (:import [java.io File]
-           [org.apache.jena.query QueryFactory]
+           [org.apache.jena.query Query QueryFactory]
            [org.apache.jena.update UpdateFactory UpdateRequest]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -263,6 +264,11 @@
                {:name (.getName ^File f)
                 :edn  (edn/read-string (slurp f))}))))
 
+(defn- query=
+  [^Query query-1 ^Query query-2]
+  (= (support/transform-query query-1)
+     (support/transform-query query-2)))
+
 (defn- update=
   [update-request-1 update-request-2]
   (.equalTo ^UpdateRequest update-request-1
@@ -272,8 +278,8 @@
   `(testing "Jena query from file:"
      ~@(map (fn [{name# :name edn# :edn}]
               `(testing ~name#
-                 (is (= (-> (quote ~edn#) format-query)
-                        (-> (quote ~edn#) create-query)))))
+                 (is (query= (-> (quote ~edn#) format-query)
+                             (-> (quote ~edn#) create-query)))))
             (read-files test-dir))))
 
 (defmacro make-update-tests [test-dir]
