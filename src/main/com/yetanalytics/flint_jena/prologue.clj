@@ -45,6 +45,18 @@
          (run! (fn [ast-node] (prologue-add! prologue ast-node))))
     prologue))
 
+(defn merge-prologues
+  [^Prologue pro-1 ^Prologue pro-2]
+  (let [prologue (.copy pro-1)]
+    (when-some [base-uri-2 (.getBaseURI pro-2)]
+      (.setBaseURI prologue base-uri-2))
+    (when-some [prefix-map-2 (.getPrefixMapping pro-2)]
+      (.setPrefixMapping prologue
+                         (-> prologue
+                             .getPrefixMapping
+                             (.setNsPrefixes prefix-map-2))))
+    prologue))
+
 (defn add-prologue!
   [^Prologue query-or-updates ^Prologue prologue]
   (doto query-or-updates

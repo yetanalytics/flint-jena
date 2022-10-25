@@ -107,3 +107,40 @@
       (is (nil? (-> prologue .getBase)))
       (is (= "http://foo-uri.com/" (-> prologue (.getPrefix "foo"))))
       (is (= "http://bar-uri.com/" (-> prologue (.getPrefix "")))))))
+
+(deftest prologue-merge-test
+  (testing "Merging prefix maps"
+    (let [pm-1  (->> {:foo "<http://foo-uri.com/>"
+                      :$   "<http://bar-uri.com/>"}
+                     (s/conform ::ps/prefixes)
+                     (conj [:prefixes])
+                     (ast/ast->jena {})
+                     second)
+          pm-2  (->> {:baz "<http://baz-uri.com/>"}
+                     (s/conform ::ps/prefixes)
+                     (conj [:prefixes])
+                     (ast/ast->jena {})
+                     second)
+          pro-1 (doto (Prologue.)
+                  (.setPrefixMapping pm-1))
+          pro-2 (doto (Prologue.)
+                  (.setPrefixMapping pm-2))
+          pro-3 (pro/merge-prologues pro-1 pro-2)]
+      (is (= "http://foo-uri.com/" (-> pro-3 (.getPrefix "foo"))))
+      (is (= "http://bar-uri.com/" (-> pro-3 (.getPrefix ""))))
+      (is (= "http://baz-uri.com/" (-> pro-3 (.getPrefix "baz"))))
+      (testing "- without side effects"
+        (is (nil? (-> pro-1 (.getPrefix "baz"))))
+        (is (nil? (-> pro-2 (.getPrefix "foo"))))
+        (is (nil? (-> pro-2 (.getPrefix "")))))))
+  (testing "Mergine base URIs"
+    (let [pro-1  (doto (Prologue.)
+                   (.setBaseURI "http://base-uri-1.com/"))
+          pro-2  (doto (Prologue.)
+                   (.setBaseURI "http://base-uri-2.com/"))
+          pro-3  (pro/merge-prologues pro-1 pro-2)]
+      (is (= "http://base-uri-2.com/" (.getBaseURI pro-3)))
+      (is (true? (.explicitlySetBaseURI pro-3)))
+      (testing "- without side effects"
+        (is (= "http://base-uri-1.com/" (.getBaseURI pro-1)))
+        (is (= "http://base-uri-2.com/" (.getBaseURI pro-2)))))))
