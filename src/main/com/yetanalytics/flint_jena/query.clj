@@ -1,6 +1,7 @@
 (ns com.yetanalytics.flint-jena.query
   (:require [com.yetanalytics.flint-jena.ast :as ast]
             [com.yetanalytics.flint-jena.expr]
+            [com.yetanalytics.flint-jena.axiom    :as ax]
             [com.yetanalytics.flint-jena.modifier :as mod]
             [com.yetanalytics.flint-jena.prologue :as pro]
             [com.yetanalytics.flint-jena.select   :as sel]
@@ -73,18 +74,40 @@
 
 ;; CONSTRUCT ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; CONSTRUCT query helpers
+
+(defn- get-construct-ast
+  [query-ast]
+  (some (fn [[k v]] (when (#{:construct} k) v)) query-ast))
+
+(defn- construct-where?
+  [query-ast]
+  (empty? (get-construct-ast query-ast)))
+
+(defn- annotate-construct-bnodes
+  [query-ast]
+  (mapv (fn [[k v :as ast]]
+          (if (#{:construct} k)
+            [k (ax/annotate-raw-bnodes v)]
+            ast))
+        query-ast))
+
 (defn- elements->nopath-triples ^BasicPattern [triple-elements]
   (let [acc (TripleCollectorBGP.)]
-    (dorun
-     (for [t-elem triple-elements
-           triple (->> (.patternElts ^ElementPathBlock t-elem)
-                       iterator-seq
-                       (map #(.asTriple ^TriplePath %)))]
-       (.addTriple acc triple)))
+    (dorun (for [t-elem triple-elements
+                 triple (->> (.patternElts ^ElementPathBlock t-elem)
+                             iterator-seq
+                             (map #(.asTriple ^TriplePath %)))]
+             (.addTriple acc triple)))
     (.getBGP acc)))
 
-(defmethod ast/ast-node->jena :construct [_ [kw triple-elements]]
-  [kw (Template. (elements->nopath-triples triple-elements))])
+;; Multimethods
+
+(defmethod ast/ast-node->jena :construct
+  [_ [kw triple-elements]]
+  [kw (->> triple-elements 
+           elements->nopath-triples
+           Template.)])
 
 (defmethod query-add! :construct
   [^Query query [_ construct-template]]
@@ -109,7 +132,7 @@
 (defmethod ast/ast-node->jena :ask [_ ask] ask)
 
 ;; Nothing special to set for ASK clause, so this is a no-op
-(defmethod query-add! :ask [_query _ask-node] nil)
+(defmethod query-add! :ask [_ _] nil)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Query elements and modifiers
@@ -179,7 +202,13 @@
 
 (defn create-query
   [prologue opts [query-type query-ast]]
-  (doto (Query.)
-    (pro/add-prologue! prologue)
-    (set-query-type! query-type)
-    (add-query-clauses! opts query-ast)))
+  (let [query-ast* (cond-> query-ast
+                     (= :query/construct query-type)
+                     annotate-construct-bnodes)
+        opts*      (cond-> opts
+                     (= :query/construct query-type)
+                     (assoc :construct-where? (construct-where? query-ast*)))]
+    (doto (Query.)
+      (pro/add-prologue! prologue)
+      (set-query-type! query-type)
+      (add-query-clauses! opts* query-ast*))))

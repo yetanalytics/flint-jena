@@ -3,7 +3,8 @@
             [com.yetanalytics.flint-jena.ast   :as ast]
             [com.yetanalytics.flint-jena.axiom :as ax])
   (:import [org.apache.jena.graph Node]
-           [org.apache.jena.sparql.core Prologue]))
+           [org.apache.jena.sparql.core Prologue Var]
+           [org.apache.jena.sparql.lang LabelToNodeMap]))
 
 (def base-prologue
   (doto (Prologue.)
@@ -15,6 +16,10 @@
     (.setPrefix "" "http://noprefix.org/")))
 
 (deftest axiom-tests
+  (testing "Wildcards"
+    (is (= :*
+           (->> [:ax/wildcard '*]
+                (ast/ast->jena {})))))
   (testing "Full IRIs"
     (is (= "http://foo.org"
            (->> [:ax/iri "<http://foo.org>"]
@@ -59,18 +64,31 @@
                 ^Node (ast/ast->jena {})
                 .getName))))
   (testing "Blank Nodes"
-    (is (= "100"
-           (->> [:ax/bnode '_100]
-                ^Node (ast/ast->jena {})
-                .getBlankNodeLabel)))
-    (is (uuid? (->> [:ax/bnode '_]
-                    ^Node (ast/ast->jena {})
-                    .getBlankNodeLabel
-                    java.util.UUID/fromString))))
-  (testing "Wildcards"
-    (is (= :*
-           (->> [:ax/wildcard '*]
-                (ast/ast->jena {}))))))
+    (let [opts {:blank-var-map  (LabelToNodeMap/createVarMap)
+                :blank-node-map (LabelToNodeMap/createBNodeMap)}]
+      (testing "- blank node vars"
+        (is (= true
+               (->> [:ax/bnode '_0] ^Var (ast/ast->jena opts) .isBlankNodeVar)
+               (->> [:ax/bnode '_] ^Var (ast/ast->jena opts) .isBlankNodeVar)))
+        (is (= false
+               (->> [:ax/bnode '_0] ^Var (ast/ast->jena opts) .isAnonVar)))
+        (is (= true
+               (->> [:ax/bnode '_] ^Var (ast/ast->jena opts) .isBlankNodeVar)))
+        (is (= "?0"
+               (->> [:ax/bnode '_0] ^Var (ast/ast->jena opts) .getName)
+               (->> [:ax/bnode '_0] ^Var (ast/ast->jena opts) .getName)))
+        (is (not= (->> [:ax/bnode '_0] ^Var (ast/ast->jena opts) .getName)
+                  (->> [:ax/bnode '_1] ^Var (ast/ast->jena opts) .getName)))
+        (is (not= (->> [:ax/bnode '_] ^Var (ast/ast->jena opts) .getName)
+                  (->> [:ax/bnode '_] ^Var (ast/ast->jena opts) .getName))))
+      (testing "- raw blank nodes"
+        (is (= true
+               (->> [:ax/bnode '_0 true] ^Node (ast/ast->jena opts) .isBlank)
+               (->> [:ax/bnode '_ true] ^Node (ast/ast->jena opts) .isBlank)))
+        (is (= (->> [:ax/bnode '_0 true] ^Node (ast/ast->jena opts) .getBlankNodeLabel)
+               (->> [:ax/bnode '_0 true] ^Node (ast/ast->jena opts) .getBlankNodeLabel)))
+        (is (not= (->> [:ax/bnode '_ true] ^Node (ast/ast->jena opts) .getBlankNodeLabel)
+                  (->> [:ax/bnode '_ true] ^Node (ast/ast->jena opts) .getBlankNodeLabel)))))))
 
 (deftest literal-test
   (testing "Literals"
@@ -90,7 +108,7 @@
            (->> [:ax/literal 200]
                 ^Node (ast/ast->jena {:iri->datatype ax/xsd-datatype-map})
                 .getLiteralValue)))
-    (is (= 3.0
+    (is (= 3
            (->> [:ax/literal 3.0]
                 ^Node (ast/ast->jena {:iri->datatype ax/xsd-datatype-map})
                 .getLiteralValue)))

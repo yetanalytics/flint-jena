@@ -1,15 +1,51 @@
 (ns com.yetanalytics.flint-jena.axiom
-  (:require [com.yetanalytics.flint-jena.ast       :as ast]
+  (:require [clojure.walk                          :as w]
+            [com.yetanalytics.flint-jena.ast       :as ast]
             [com.yetanalytics.flint.axiom.protocol :as p]
             [com.yetanalytics.flint.axiom.impl])
-  (:import [java.util UUID]
-           [org.apache.jena.atlas.lib EscapeStr]
-           [org.apache.jena.graph BlankNodeId NodeFactory]
+  (:import [org.apache.jena.atlas.lib EscapeStr]
+           [org.apache.jena.datatypes RDFDatatype]
+           [org.apache.jena.datatypes.xsd XSDDatatype]
+           [org.apache.jena.graph NodeFactory]
            [org.apache.jena.irix IRIx]
            [org.apache.jena.sparql.core Prologue Var]
            [org.apache.jena.sparql.graph NodeConst]
-           [org.apache.jena.datatypes RDFDatatype]
-           [org.apache.jena.datatypes.xsd XSDDatatype]))
+           [org.apache.jena.sparql.lang LabelToNodeMap]))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Blank Nodes
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; The need for all these blank node utilities is that under the hood, blank
+;; nodes in Jena queries are represented by Var objects, not blank Node objects.
+;; The exception is in CONSTRUCT templates, hence utilities to convert Vars into
+;; blank Nodes.
+
+;; In addition, we need these node maps to ensure that a) our compiled queries
+;; match those created by Jena parsers, and b) ensure that equality and hash ops
+;; can work properly on queries.
+
+(defn blank-node-map []
+  (LabelToNodeMap/createBNodeMap))
+
+(defn blank-var-map []
+  (LabelToNodeMap/createVarMap))
+
+(defmulti annotate-raw-bnode
+  "Annotate whether a blank node should be compiled as a Node_Blank object
+   (i.e. \"raw bnode\") or as a Var object. The annotation becomes a third
+   entry in the AST vector."
+  ast/ast-node-dispatch)
+
+(defmethod annotate-raw-bnode :default [ast-node] ast-node)
+
+(defmethod annotate-raw-bnode :ax/bnode [[bnode-type bnode-str]]
+  [bnode-type bnode-str true])
+
+(defn annotate-raw-bnodes
+  "Walk the `ast` tree and mark all blank nodes as raw."
+  [ast]
+  (w/postwalk annotate-raw-bnode ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Literal Datatypes
@@ -132,16 +168,18 @@
               (format "Prefixed IRI '%s' does not have prefix in prologue."
                       iri))))))
 
-(defmethod ast/ast-node->jena :ax/var [_ [_ variable]]
+(defmethod ast/ast-node->jena :ax/var
+  [_ [_ variable]]
   (let [^String var-str (p/-format-variable variable)]
     (-> var-str (.substring 1) Var/alloc)))
 
-(defmethod ast/ast-node->jena :ax/bnode [_ [_ bnode]]
-  (let [^String bnode-str (p/-format-bnode bnode)]
-    (if (= "[]" bnode-str)
-      ;; TODO: Use squuids
-      (-> (UUID/randomUUID) str BlankNodeId. NodeFactory/createBlankNode)
-      (-> bnode-str (.substring 2) BlankNodeId. NodeFactory/createBlankNode))))
+(defmethod ast/ast-node->jena :ax/bnode
+  [{:keys [blank-var-map blank-node-map]} [_ bnode raw-bnode?]]
+  (let [^String bnode-string    (p/-format-bnode bnode)
+        ^LabelToNodeMap bnode-m (if raw-bnode? blank-node-map blank-var-map)]
+    (if (= "[]" bnode-string)
+      (-> bnode-m .allocNode)
+      (-> bnode-m (.asNode (.substring bnode-string 1))))))
 
 (defn- iri->dt
   [iri->datatype dt-iri]

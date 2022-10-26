@@ -3,6 +3,8 @@
             [com.yetanalytics.flint.util :as u]))
 
 (defn ast-node-dispatch
+  ([ast-node]
+   (if-some [k (u/get-keyword ast-node)] k :default))
   ([_ ast-node]
    (if-some [k (u/get-keyword ast-node)] k :default))
   ([_ _ ast-node]

@@ -14,6 +14,10 @@
             [com.yetanalytics.flint-jena.values]
             [com.yetanalytics.flint-jena.where]))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Flint -> AST conformer
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn- conform-sparql-err-map
   [error-kw error-loc-kws sparql]
   {:kind    error-kw
@@ -44,16 +48,16 @@
 (def conform-update
   (partial conform-sparql ::invalid-update us/update-spec))
 
-(defn create-query
-  [query & {:keys [spec-ed?]
-            :or   {spec-ed? false}
-            :as   opts}]
-  (let [query-ast (conform-query spec-ed? query)
-        prologue  (pro/create-prologue opts query-ast)
-        opts*     (merge {:prologue      prologue
-                          :iri->datatype ax/xsd-datatype-map}
-                         opts)]
-    (qu/create-query prologue opts* query-ast)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Additional Helpers
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- merge-opts
+  [opts prologue]
+  (-> (merge {:iri->datatype ax/xsd-datatype-map} opts)
+      (merge {:prologue       prologue
+              :blank-node-map (ax/blank-node-map)
+              :blank-var-map  (ax/blank-var-map)})))
 
 (defn- conj-prologue
   [opts prologue-coll update-ast]
@@ -64,28 +68,32 @@
     (let [next-pro (pro/create-prologue opts update-ast)]
       (conj prologue-coll next-pro))))
 
-(defn- merge-opts
-  [opts prologue]
-  (merge {:prologue      prologue
-          :iri->datatype ax/xsd-datatype-map}
-         opts))
-
 (defn- ->update-map
   [prologue opts update-ast]
   {:prologue   prologue
    :opts       opts
    :update-ast update-ast})
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Putting it all together
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn create-query
+  [query & {:keys [spec-ed?]
+            :or   {spec-ed? false}
+            :as   opts}]
+  (let [query-ast (conform-query spec-ed? query)
+        prologue  (pro/create-prologue opts query-ast)
+        opts*     (merge-opts opts prologue)]
+    (qu/create-query prologue opts* query-ast)))
+
 (defn create-updates
   [updates & {:keys [spec-ed?]
               :or   {spec-ed? false}
               :as   opts}]
   (let [update-asts (map #(conform-update spec-ed? %) updates)
-        prologues   (reduce (partial conj-prologue opts)
-                            []
-                            update-asts)
-        opts-coll   (map (partial merge-opts opts)
-                         prologues)
+        prologues   (reduce (partial conj-prologue opts) [] update-asts)
+        opts-coll   (map (partial merge-opts opts) prologues)
         update-coll (mapv ->update-map prologues opts-coll update-asts)]
     (up/create-updates update-coll)))
 
