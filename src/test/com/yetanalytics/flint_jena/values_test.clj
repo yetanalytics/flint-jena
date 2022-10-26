@@ -38,7 +38,7 @@
           foo-binding
           (.build
            (doto (Binding/builder)
-             (.add foo-var (NodeFactory/createLiteral "2" XSDDatatype/XSDlong))
+             (.add foo-var (NodeFactory/createLiteral "2" XSDDatatype/XSDinteger))
              (.add baz-var (NodeFactory/createURI "http://prefix.org/one"))))
           bar-binding
           (.build

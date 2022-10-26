@@ -24,7 +24,7 @@
   (-add-negated-path! [path ^P_NegPropSet negated-prop-set]
     (.add negated-prop-set path))
   
-  P_ReverseLink
+  P_ReverseLink ; Not implemented but allowed by spec...
   (-add-negated-path! [path ^P_NegPropSet negated-prop-set]
     (.add negated-prop-set path))
   

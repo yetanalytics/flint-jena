@@ -5,7 +5,8 @@
             [com.yetanalytics.flint-jena.ast   :as ast]
             [com.yetanalytics.flint-jena.axiom :as ax]
             [com.yetanalytics.flint.spec.expr  :as es])
-  (:import [org.apache.jena.sparql.core Prologue Var]
+  (:import [org.apache.jena.query Query]
+           [org.apache.jena.sparql.core Prologue Var]
            [org.apache.jena.sparql.expr Expr ExprAggregator]
            [org.apache.jena.sparql.syntax ElementBind]))
 
@@ -17,6 +18,8 @@
   (doto (Prologue.)
     (.setBaseURI "http://base-uri.com/")
     (.setPrefix "xsd" "http://www.w3.org/2001/XMLSchema#")))
+
+(def query (Query. prologue))
 
 (defn- expr->str
   [expr]
@@ -31,6 +34,7 @@
   (->> agg-expr
        (s/conform ::es/agg-expr)
        ^Expr (ast/ast->jena {:prologue      prologue
+                             :query         query
                              :iri->datatype ax/xsd-datatype-map})
        .toString))
 
@@ -39,6 +43,7 @@
   (->> agg-expr
        (s/conform ::es/agg-expr)
        ^ExprAggregator (ast/ast->jena {:prologue      prologue
+                                       :query         query
                                        :iri->datatype ax/xsd-datatype-map})
        .getAggregator
        .toString))

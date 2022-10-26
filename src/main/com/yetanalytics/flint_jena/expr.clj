@@ -254,8 +254,9 @@
    in a pure functional manner, but since internally the aggregate maps are
    different fields from the query body this should be fine."
   [{:keys [^Query query]} ^Aggregator agg]
-  (let [expr (.allocAggregate query agg)]
-    expr))
+  (if (some? query)
+    (.allocAggregate query agg) ; Returns a new expr
+    (throw (IllegalArgumentException. "Missing query in opts map!"))))
 
 (defmethod ast-node->jena-expr 'sum
   [{dist? :distinct? :or {dist? false} :as opts} _ args]
