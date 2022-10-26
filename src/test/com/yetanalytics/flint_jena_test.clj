@@ -5,10 +5,9 @@
             [com.yetanalytics.flint        :as flint]
             [com.yetanalytics.flint-jena   :refer [create-query
                                                    create-updates
-                                                   create-update]]
-            [com.yetanalytics.test-support :as support])
+                                                   create-update]])
   (:import [java.io File]
-           [org.apache.jena.query Query QueryFactory]
+           [org.apache.jena.query QueryFactory]
            [org.apache.jena.update UpdateFactory UpdateRequest]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -290,94 +289,3 @@
 
 (deftest update-tests
   (make-update-tests "dev-resources/test-fixtures/update"))
-
-(comment
-  (import '[org.apache.jena.sparql.core Var]
-          '[org.apache.jena.sparql.util NodeIsomorphismMap])
-
-  (= (support/transform-query
-      (format-query
-       '{:prefixes {:$ "<http://example.com/data/#>"}
-         :select   [?x [(* (min ?y) 2) ?min]]
-         :where    [[?x :p ?y] [?x :q ?z]]
-         ; :group-by [?x (str ?z)]
-         }))
-     (support/transform-query
-      (create-query
-       '{:prefixes {:$ "<http://example.com/data/#>"}
-         :select   [?x [(* (min ?y) 2) ?min]]
-         :where    [[?x :p ?y] [?x :q ?z]]
-         ; :group-by [?x (str ?z)]
-         })))
-
-  (-> (support/transform-query
-       (create-query
-        '{:prefixes {:$ "<http://data.example/>"}
-          :select   [[(avg ?size) ?asize]]
-          :where    [[?x :size ?size]]
-          :group-by [?x]
-          :having   [(> (avg ?size) 10)]}))
-      .getHavingExprs)
-
-  (-> '{:prefixes {:$ "<http://example.com/data/#>"}
-        :select   [?x [(* (min ?y) 2) ?min]]
-        :where    [[?x :p ?y] [?x :q ?z]]
-        :group-by [?x (str ?z)]}
-      format-query
-      support/transform-query
-      .getProject
-      ;; (.getExpr (Var/alloc "min"))
-      ;; .getArg1
-      ;; .getAggVar
-      )
-
-  (.nodeIso (-> '{:prefixes  {:$ "<http://example.com/data/#>"}
-                  :construct [[?x :p _1]]
-                  :where     [[?x :p ?y] [?x :q ?z]]}
-                format-query
-                .getConstructTemplate
-                .getTriples
-                first
-                .getObject)
-            (-> '{:prefixes  {:$ "<http://example.com/data/#>"}
-                  :construct [[?x :p _1]]
-                  :where     [[?x :p ?y] [?x :q ?z]]}
-                format-query
-                .getConstructTemplate
-                .getTriples
-                first
-                .getObject)
-            (NodeIsomorphismMap.))
-  
-  (= (-> '{:prefixes  {:$ "<http://example.com/data/#>"}
-           :construct [[?x :p _]]
-           :where     [[?x :q _]]}
-         format-query)
-     (-> '{:prefixes  {:$ "<http://example.com/data/#>"}
-           :construct [[?x :p _]]
-           :where     [[?x :q _]]}
-         create-query))
-  
-  (= (-> '{:prefixes {:$ "<http://books.example/>"}
-           :select   [?lprice #_[(sum ?lprice) ?totalPrice]]
-           :where    [[?org :affiliates ?auth]
-                      [?auth :writesBook ?book]
-                      [?book :price ?lprice]]
-          ;;  :group-by [?org]
-           ; :having   [(> (sum ?lprice) 10)]
-           }
-         format-query
-         .getQueryPattern
-         .getElements)
-     (-> '{:prefixes {:$ "<http://books.example/>"}
-           :select   [?lprice #_[(sum ?lprice) ?totalPrice]]
-           :where    [[?org :affiliates ?auth]
-                      [?auth :writesBook ?book]
-                      [?book :price ?lprice]]
-          ;;  :group-by [?org]
-           ; :having   [(> (sum ?lprice) 10)]
-           }
-         create-query
-         .getQueryPattern
-         .getElements))
-  )
