@@ -13,6 +13,11 @@
   (doto (Prologue.)
     (.setPrefix "xsd" "http://www.w3.org/2001/XMLSchema#")))
 
+(def base-prologue
+  (doto (Prologue.)
+    (.setBaseURI "http://base-uri.com/")
+    (.setPrefix "xsd" "http://www.w3.org/2001/XMLSchema#")))
+
 (defn- expr->str
   [expr]
   (->> expr
@@ -88,6 +93,18 @@
       "(SHA384 \"x\")"      '(sha384 "x")
       "(SHA512 \"x\")"      '(sha512 "x")
       "(bound ?x)"          '(bound ?x)))
+  (testing "Unary IRI expressions with base URI"
+    (is (= "(iri \"http://base-uri.com/\" \"foo\")"
+           (->> '(iri "foo")
+                (s/conform ::es/expr)
+                ^Expr (ast/ast->jena {:prologue      base-prologue
+                                      :iri->datatype ax/xsd-datatype-map})
+                .toString)
+           (->> '(uri "foo")
+                (s/conform ::es/expr)
+                ^Expr (ast/ast->jena {:prologue      base-prologue
+                                      :iri->datatype ax/xsd-datatype-map})
+                .toString))))
   (testing "Unary WHERE expressions"
     (are [expr-str expr]
          (= expr-str
@@ -158,7 +175,7 @@
       "(concat \"foo\" \"-\" \"bar\")"      '(concat "foo" "-" "bar")
       "(coalesce ?x \"boo\")"               '(coalesce ?x "boo")))
   (testing "Nested expressions"
-    (is (= "(* (+ \"2\"^^<http://www.w3.org/2001/XMLSchema#long> \"3\"^^<http://www.w3.org/2001/XMLSchema#long>) \"4\"^^<http://www.w3.org/2001/XMLSchema#long>)"
+    (is (= "(* (+ 2 3) 4)"
            (-> '(* (+ 2 3) 4) expr->str)
            (-> '(* (+ 2 3) 4) agg-expr->str)))
     (is (= "(! (|| true (&& false false)))"

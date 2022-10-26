@@ -2,7 +2,7 @@
   (:require [com.yetanalytics.flint-jena.ast :as ast])
   (:import [java.util List]
            [org.apache.jena.graph Node]
-           [org.apache.jena.sparql.core Var]
+           [org.apache.jena.sparql.core Prologue Var]
            [org.apache.jena.sparql.syntax Element ElementBind]
            [org.apache.jena.sparql.expr.aggregate AggregatorFactory]
            [org.apache.jena.sparql.expr
@@ -126,9 +126,6 @@
 (defunary 'lcase          E_StrLowerCase)
 (defunary 'encode-for-uri E_StrEncodeForURI)
 
-(defunary 'iri E_IRI)
-(defunary 'uri E_IRI)
-
 (defunary 'bound E_Bound)
 
 (defunary 'blank?   E_IsBlank)
@@ -157,8 +154,19 @@
 (defunary 'sha384 E_SHA384)
 (defunary 'sha512 E_SHA512)
 
-;; Need to define the defmethod bodies manually since the E_Exists and
-;; E_NotExists constructors are overloaded and require type hitns.
+;; Need to define 'iri and 'uri manually since they accept the base URI
+;; as a constructor argument.
+
+(defmethod ast-node->jena-expr 'iri
+  [{:keys [prologue]} _ [iri-arg]]
+  (E_IRI. (.getBaseURI ^Prologue prologue) iri-arg))
+
+(defmethod ast-node->jena-expr 'uri
+  [{:keys [prologue]} _ [uri-arg]]
+  (E_IRI. (.getBaseURI ^Prologue prologue) uri-arg))
+
+;; Need to define 'exists and 'not-exists manually since the E_Exists and
+;; E_NotExists constructors are overloaded and require type hints.
 
 (defmethod ast-node->jena-expr 'exists
   [_ _ [where-clause]]
