@@ -7,6 +7,7 @@
             [com.yetanalytics.flint-jena.prologue :as pro]
             [com.yetanalytics.flint-jena.query    :as qu]
             [com.yetanalytics.flint-jena.update   :as up]
+            [com.yetanalytics.flint-jena.expr]
             [com.yetanalytics.flint-jena.modifier]
             [com.yetanalytics.flint-jena.path]
             [com.yetanalytics.flint-jena.select]

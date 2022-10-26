@@ -1,6 +1,5 @@
 (ns com.yetanalytics.flint-jena.query
-  (:require [com.yetanalytics.flint-jena.ast :as ast]
-            [com.yetanalytics.flint-jena.expr]
+  (:require [com.yetanalytics.flint-jena.ast      :as ast]
             [com.yetanalytics.flint-jena.axiom    :as ax]
             [com.yetanalytics.flint-jena.modifier :as mod]
             [com.yetanalytics.flint-jena.prologue :as pro]
@@ -202,13 +201,14 @@
 
 (defn create-query
   [prologue opts [query-type query-ast]]
-  (let [query-ast* (cond-> query-ast
-                     (= :query/construct query-type)
-                     annotate-construct-bnodes)
-        opts*      (cond-> opts
-                     (= :query/construct query-type)
-                     (assoc :construct-where? (construct-where? query-ast*)))]
-    (doto (Query.)
+  (let [qast* (cond-> query-ast
+                (= :query/construct query-type)
+                annotate-construct-bnodes)
+        opts* (cond-> opts
+                (= :query/construct query-type)
+                (assoc :construct-where? (construct-where? qast*)))
+        query (Query.)]
+    (doto query
       (pro/add-prologue! prologue)
       (set-query-type! query-type)
-      (add-query-clauses! opts* query-ast*))))
+      (add-query-clauses! (assoc opts* :query query) qast*))))

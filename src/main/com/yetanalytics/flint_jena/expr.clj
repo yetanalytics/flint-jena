@@ -2,9 +2,12 @@
   (:require [com.yetanalytics.flint-jena.ast :as ast])
   (:import [java.util List]
            [org.apache.jena.graph Node]
+           [org.apache.jena.query Query]
            [org.apache.jena.sparql.core Prologue Var]
            [org.apache.jena.sparql.syntax Element ElementBind]
-           [org.apache.jena.sparql.expr.aggregate AggregatorFactory]
+           [org.apache.jena.sparql.expr.aggregate
+            Aggregator
+            AggregatorFactory]
            [org.apache.jena.sparql.expr
             ;; Arithmetic and Numeric Expressions
             E_Add E_Subtract E_Multiply E_Divide
@@ -244,34 +247,40 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn- agg->expr
-  [agg]
-  ;; TODO: Use squuids or var atom
-  (let [v (Var/alloc (str (java.util.UUID/randomUUID)))]
-    (ExprAggregator. v agg)))
+  "Return a new aggregate expression with a bound variable.
+   
+   IMPORTANT: This applies a side effect to the `query` being constructed.
+   Unfortunately, Jena makes it extremely difficult to perform this operation
+   in a pure functional manner, but since internally the aggregate maps are
+   different fields from the query body this should be fine."
+  [{:keys [^Query query]} ^Aggregator agg]
+  (let [expr (.allocAggregate query agg)]
+    expr))
 
 (defmethod ast-node->jena-expr 'sum
-  [{dist? :distinct? :or {dist? false}} _ args]
-  (agg->expr (AggregatorFactory/createSum dist? (first args))))
+  [{dist? :distinct? :or {dist? false} :as opts} _ args]
+  (agg->expr opts (AggregatorFactory/createSum dist? (first args))))
 
 (defmethod ast-node->jena-expr 'min
-  [{dist? :distinct? :or {dist? false}} _ args]
-  (agg->expr (AggregatorFactory/createMin dist? (first args))))
+  [{dist? :distinct? :or {dist? false} :as opts} _ args]
+  (agg->expr opts (AggregatorFactory/createMin dist? (first args))))
 
 (defmethod ast-node->jena-expr 'max
-  [{dist? :distinct? :or {dist? false}} _ args]
-  (agg->expr (AggregatorFactory/createMax dist? (first args))))
+  [{dist? :distinct? :or {dist? false} :as opts} _ args]
+  (agg->expr opts (AggregatorFactory/createMax dist? (first args))))
 
 (defmethod ast-node->jena-expr 'avg
-  [{dist? :distinct? :or {dist? false}} _ args]
-  (agg->expr (AggregatorFactory/createAvg dist? (first args))))
+  [{dist? :distinct? :or {dist? false} :as opts} _ args]
+  (agg->expr opts (AggregatorFactory/createAvg dist? (first args))))
 
 (defmethod ast-node->jena-expr 'sample
-  [{dist? :distinct? :or {dist? false}} _ args]
-  (agg->expr (AggregatorFactory/createSample dist? (first args))))
+  [{dist? :distinct? :or {dist? false} :as opts} _ args]
+  (agg->expr opts (AggregatorFactory/createSample dist? (first args))))
 
 (defmethod ast-node->jena-expr 'count
-  [{dist? :distinct? :or {dist? false}} _ args]
+  [{dist? :distinct? :or {dist? false} :as opts} _ args]
   (agg->expr
+   opts
    (if (= :* (first args))
      (AggregatorFactory/createCount dist?)
      (AggregatorFactory/createCountExpr dist? (first args)))))
@@ -279,8 +288,9 @@
 (defmethod ast-node->jena-expr 'group-concat
   [{dist? :distinct?
     ?sep  :separator
-    :or   {dist? false}} _ args]
-  (agg->expr (AggregatorFactory/createGroupConcat dist? (first args) ?sep nil)))
+    :or   {dist? false}
+    :as   opts} _ args]
+  (agg->expr opts (AggregatorFactory/createGroupConcat dist? (first args) ?sep nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Custom Expressions

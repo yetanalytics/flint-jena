@@ -264,11 +264,6 @@
                {:name (.getName ^File f)
                 :edn  (edn/read-string (slurp f))}))))
 
-(defn- query=
-  [^Query query-1 ^Query query-2]
-  (= (support/transform-query query-1)
-     (support/transform-query query-2)))
-
 (defn- update=
   [update-request-1 update-request-2]
   (.equalTo ^UpdateRequest update-request-1
@@ -278,8 +273,8 @@
   `(testing "Jena query from file:"
      ~@(map (fn [{name# :name edn# :edn}]
               `(testing ~name#
-                 (is (query= (-> (quote ~edn#) format-query)
-                             (-> (quote ~edn#) create-query)))))
+                 (is (= (-> (quote ~edn#) format-query)
+                        (-> (quote ~edn#) create-query)))))
             (read-files test-dir))))
 
 (defmacro make-update-tests [test-dir]
@@ -362,4 +357,27 @@
            :construct [[?x :p _]]
            :where     [[?x :q _]]}
          create-query))
+  
+  (= (-> '{:prefixes {:$ "<http://books.example/>"}
+           :select   [?lprice #_[(sum ?lprice) ?totalPrice]]
+           :where    [[?org :affiliates ?auth]
+                      [?auth :writesBook ?book]
+                      [?book :price ?lprice]]
+          ;;  :group-by [?org]
+           ; :having   [(> (sum ?lprice) 10)]
+           }
+         format-query
+         .getQueryPattern
+         .getElements)
+     (-> '{:prefixes {:$ "<http://books.example/>"}
+           :select   [?lprice #_[(sum ?lprice) ?totalPrice]]
+           :where    [[?org :affiliates ?auth]
+                      [?auth :writesBook ?book]
+                      [?book :price ?lprice]]
+          ;;  :group-by [?org]
+           ; :having   [(> (sum ?lprice) 10)]
+           }
+         create-query
+         .getQueryPattern
+         .getElements))
   )
