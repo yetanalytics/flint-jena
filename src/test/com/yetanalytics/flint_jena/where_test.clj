@@ -63,14 +63,28 @@
               (ast/ast->jena {:prologue prologue}))
          (NodeIsomorphismMap.)))
     (is (.equalTo
+         (let [triples (doto (ElementPathBlock.)
+                         (.addTriple bar-triple)
+                         (.addTriple baz-triple))]
+           (doto (ElementGroup.)
+             (.addElement triples)))
+         (->> '[[?s :foo/bar ?o]
+                [?s :foo/baz ?o]]
+              (s/conform ::ws/where)
+              (ast/ast->jena {:prologue prologue}))
+         (NodeIsomorphismMap.)))
+    (is (.equalTo
          (let [t1 (doto (ElementPathBlock.)
                     (.addTriple bar-triple))
                t2 (doto (ElementPathBlock.)
-                    (.addTriple baz-triple))]
+                    (.addTriple baz-triple))
+               f  (ElementFilter. (E_Exists. baz-element))]
            (doto (ElementGroup.)
              (.addElement t1)
+             (.addElement f)
              (.addElement t2)))
          (->> '[[?s :foo/bar ?o]
+                [:filter (exists [[?s :foo/baz ?o]])]
                 [?s :foo/baz ?o]]
               (s/conform ::ws/where)
               (ast/ast->jena {:prologue prologue}))
@@ -199,18 +213,6 @@
               (ast/ast->jena {:prologue prologue}))
          (NodeIsomorphismMap.)))
     (is (.equalTo
-         (doto (ElementGroup.)
-           (.addElement (doto (ElementPathBlock.)
-                          (.addTriple bar-triple)))
-           (.addElement (doto (ElementGroup.)
-                          (.addElement (ElementSubQuery. subquery-fix-1)))))
-         (->> '[[?s :foo/bar ?o]
-                [:where {:select [?x ?y ?z]
-                         :where  [[?x ?y ?z]]}]]
-              (s/conform ::ws/where)
-              (ast/ast->jena {:prologue prologue}))
-         (NodeIsomorphismMap.)))
-    (is (.equalTo
          (ElementSubQuery. subquery-fix-2)
          (->> '{:select   [?x]
                 :where    [[?x ?y ?z]]
@@ -236,4 +238,18 @@
                 :values         {?d ["<http://foo.org/bar>"]}}
               (s/conform ::ws/where)
               (ast/ast->jena {:prologue prologue}))
-         (NodeIsomorphismMap.)))))
+         (NodeIsomorphismMap.)))
+    (let [subquery (ElementSubQuery. subquery-fix-1)
+          triple   (doto (ElementPathBlock.)
+                     (.addTriple bar-triple))
+          element  (doto (ElementGroup.)
+                     (.addElement triple)
+                     (.addElement subquery))]
+      (is (.equalTo
+           element
+           (->> '[[?s :foo/bar ?o]
+                  [:where {:select [?x ?y ?z]
+                           :where  [[?x ?y ?z]]}]]
+                (s/conform ::ws/where)
+                (ast/ast->jena {:prologue prologue}))
+           (NodeIsomorphismMap.))))))

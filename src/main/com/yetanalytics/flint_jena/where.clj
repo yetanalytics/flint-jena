@@ -12,6 +12,7 @@
             ElementMinus
             ElementNamedGraph
             ElementOptional
+            ElementPathBlock
             ElementService
             ElementSubQuery
             ElementUnion]))
@@ -93,11 +94,26 @@
   [_ [_ element]]
   element)
 
+(defn- path-block? [element]
+  (instance? ElementPathBlock element))
+
+(defn- group-path-blocks [pblock-elements]
+  (let [acc (ElementPathBlock.)]
+    (dorun (for [^ElementPathBlock pb  pblock-elements
+                 element-pblock-triple (iterator-seq (.patternElts pb))]
+             (.addTriplePath acc element-pblock-triple)))
+    [acc]))
+
 (defmethod ast/ast-node->jena :where-sub/where
   [_ [_ elements]]
-  (let [group-element (ElementGroup.)]
-    (run! (fn [element] (.addElement group-element element))
-          elements)
+  (let [elem-partitions (partition-by path-block? elements)
+        group-element   (ElementGroup.)]
+    (->> elem-partitions
+         (mapcat (fn [elem-part]
+                   (cond->> elem-part
+                     (path-block? (first elem-part)) group-path-blocks)))
+         (run! (fn [element]
+                 (.addElement group-element element))))
     group-element))
 
 (defmethod ast/ast-node->jena :where/union
