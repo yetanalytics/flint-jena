@@ -67,17 +67,16 @@
         :one  `(new ~class-name (first ~'args))
         :two  `(new ~class-name (first ~'args) (second ~'args)))))
 
-(defn- defvarardic-err-msg
-  [sym]
-  (format "Expression '%s' cannot have less than 2 arguments!"
-          (second sym)))
-
-(defmacro defvaradic [sym class-name]
+(defmacro defvariadic [sym class-name]
   `(defmethod ast-node->jena-expr ~sym
      [~'opts ~'op ~'args]
      (cond
        (< (count ~'args) 2)
-       (throw (IllegalArgumentException. ~(defvarardic-err-msg sym)))
+       (throw (ex-info (-> "Expression '%s' cannot have less than 2 arguments!"
+                           (format ~sym))
+                       {:kind ::invalid-expr-arity
+                        :expr ~sym
+                        :args ~'args}))
        (= (count ~'args) 2)
        (new ~class-name
             (first ~'args)
@@ -201,12 +200,12 @@
 
 ;; Binary+ expressions
 
-(defvaradic 'and E_LogicalAnd)
-(defvaradic 'or  E_LogicalOr)
-(defvaradic '+   E_Add)
-(defvaradic '-   E_Subtract)
-(defvaradic '*   E_Multiply)
-(defvaradic '/   E_Divide)
+(defvariadic 'and E_LogicalAnd)
+(defvariadic 'or  E_LogicalOr)
+(defvariadic '+   E_Add)
+(defvariadic '-   E_Subtract)
+(defvariadic '*   E_Multiply)
+(defvariadic '/   E_Divide)
 
 (defmethod ast-node->jena-expr 'in
   [_ _ [expr & ^List expr-coll]]
@@ -246,6 +245,10 @@
 ;; Aggregate Expressions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(defn- throw-missing-query []
+  (throw (ex-info "Missing query in opts map!"
+                  {:kind ::query-not-present})))
+
 (defn- agg->expr
   "Return a new aggregate expression with a bound variable.
    
@@ -256,7 +259,7 @@
   [{:keys [^Query query]} ^Aggregator agg]
   (if (some? query)
     (.allocAggregate query agg) ; Returns a new expr
-    (throw (IllegalArgumentException. "Missing query in opts map!"))))
+    (throw-missing-query)))
 
 (defmethod ast-node->jena-expr 'sum
   [{dist? :distinct? :or {dist? false} :as opts} _ args]
@@ -300,6 +303,14 @@
 ;; The real Jena parser uses a registry for aggregates, so we copy that
 ;; strategy with the `aggregates` opt arg.
 
+(defn- throw-unregistered-agg
+  [fn-uri]
+  (throw (ex-info (-> (str "Custom function '%s' not registered as aggregate; "
+                           "cannot use 'distinct?' keyword.")
+                      (format fn-uri))
+                  {:kind ::unregistered-aggregate
+                   :uri  fn-uri})))
+
 (defmethod ast-node->jena-expr :custom
   [{aggs  :aggregate-fns
     ?dist :distinct?}
@@ -317,10 +328,7 @@
       (nil? ?dist)
       (E_Function. fn-uri expr-list)
       :else
-      (throw (IllegalArgumentException.
-              (format (str "Custom function '%s' not registered as aggregate; "
-                           "cannot use 'distinct?' keyword.")
-                      fn-uri))))))
+      (throw-unregistered-agg fn-uri))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Putting it all together

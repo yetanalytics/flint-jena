@@ -37,12 +37,19 @@
 
 ;; Varardic Paths
 
+(defn- throw-path-arity-error
+  [op args]
+  (throw (ex-info (-> "The '%s' path must have at least 2 arguments!"
+                      (format (name op)))
+                  {:kind ::invalid-path-arity
+                   :op   (name op)
+                   :args args})))
+
 (defn- path-coll->jena
   [path->jena op paths]
   (cond
     (< (count paths) 2)
-    (throw (IllegalArgumentException.
-            (format "The '%s' path must have at least 2 arguments!" (name op))))
+    (throw-path-arity-error op paths)
     (= (count paths) 2)
     (path->jena (first paths) (second paths))
     :else ; Make op right-associative (shouldn't matter here)

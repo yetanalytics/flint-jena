@@ -51,8 +51,8 @@
            (try (->> [:ax/prefix-iri :notexists/xyz]
                      ^Node (ast/ast->jena {:prologue prefixes-prologue})
                      .getURI)
-                (catch IllegalArgumentException e
-                  (.getMessage e))))))
+                (catch clojure.lang.ExceptionInfo e
+                  (ex-message e))))))
   (testing "'a' IRI"
     (is (= "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
            (->> [:ax/rdf-type :a]

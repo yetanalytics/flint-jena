@@ -161,6 +161,11 @@
   [query [_ values-ast]]
   (values/add-values! query values-ast))
 
+(defn- throw-construct-where [where-ast]
+  (throw (ex-info "CONSTRUCT WHERE must only consist of Basic Graph Patterns!"
+                  {:kind ::invalid-construct-where
+                   :where-ast where-ast})))
+
 ;; In case the CONSTRUCT clause is empty
 ;; This should always be called after the CONSTRUCT since the AST is sorted
 (defn- add-where-as-construct!
@@ -172,8 +177,7 @@
               Template.
               (.setConstructTemplate query))
          (catch Exception _
-           (throw (IllegalArgumentException.
-                   "CONSTRUCT WHERE must only consist of Basic Graph Patterns!"))))))
+           (throw-construct-where where-ast)))))
 
 (defmethod query-add! :where
   [query [_ where-ast]]

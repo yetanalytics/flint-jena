@@ -162,8 +162,8 @@
                   [:expr/branch
                    [[:expr/op op]
                     [:expr/args '[[:expr/terminal [:ax/var ?x]]]]]])
-                 (catch IllegalArgumentException e
-                   (.getMessage e))))
+                 (catch clojure.lang.ExceptionInfo e
+                   (ex-message e))))
       '+ '- '* '/ 'and 'or))
   (testing "Misc-arity expressions"
     (are [expr-str expr]
@@ -236,8 +236,8 @@
                      ^Expr (ast/ast->jena {:prologue      prologue
                                            :iri->datatype ax/xsd-datatype-map
                                            :aggregate-fns #{}}))
-                (catch IllegalArgumentException e
-                  (.getMessage e)))))))
+                (catch clojure.lang.ExceptionInfo e
+                  (ex-message e)))))))
 
 (deftest expr-as-var-test
   (testing "Expression AS variable"

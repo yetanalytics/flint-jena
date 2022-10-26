@@ -145,6 +145,25 @@
                             XSDDatatype/XSDdouble]))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Exceptions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- throw-prefix-not-found
+  [prologue iri]
+  (throw (ex-info
+          (format "Prefixed IRI '%s' does not have prefix in prologue." iri)
+          {:kind     ::prefix-not-found
+           :iri      iri
+           :prologue prologue})))
+
+(defn- throw-datatype-not-found
+  [iri-datatype iri]
+  (throw (ex-info (format "Datatype cannot be retrieved for IRI '%s'." iri)
+                  {:kind      ::datatype-not-found
+                   :iri       iri
+                   :datatypes iri-datatype})))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Node Axioms
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -164,9 +183,7 @@
   (let [^String iri (p/-format-prefix-iri prefix-iri)]
     (if-some [expanded-iri (.expandPrefixedName prologue iri)]
       (NodeFactory/createURI expanded-iri)
-      (throw (IllegalArgumentException.
-              (format "Prefixed IRI '%s' does not have prefix in prologue."
-                      iri))))))
+      (throw-prefix-not-found prologue iri))))
 
 (defmethod ast/ast-node->jena :ax/var
   [_ [_ variable]]
@@ -185,9 +202,7 @@
   [iri->datatype dt-iri]
   (try (iri->datatype dt-iri)
        (catch Exception _
-         (throw (IllegalArgumentException.
-                 (format "Datatype cannot be retrieved for IRI '%s'."
-                         dt-iri))))))
+         (throw-datatype-not-found iri->datatype dt-iri))))
 
 (defmethod ast/ast-node->jena :ax/literal
   [{:keys [iri->datatype]} [_ literal]]
