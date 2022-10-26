@@ -10,7 +10,9 @@
  {:test {:extra-paths ["src/test"]
          :extra-deps {io.github.cognitect-labs/test-runner {:git/tag "v0.5.1"
                                                             :git/sha "dfb30dd"}
-                      cloverage/cloverage {:mvn/version "1.2.2"}}}
+                      cloverage/cloverage {:mvn/version "1.2.2"}
+                      ;; For dev
+                      criterium/criterium {:mvn/version "0.4.6"}}}
   :run {:exec-fn   cognitect.test-runner.api/test
         :exec-args {:dirs ["src/test"]}}
   :cov {:exec-fn   cloverage.coverage/run-project
