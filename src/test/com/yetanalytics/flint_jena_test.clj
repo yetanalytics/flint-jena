@@ -94,18 +94,6 @@
     (is (= (format-query ask-query-fix)
            (create-query ask-query-fix)))))
 
-(comment
-  (require '[criterium.core :as crit])
-
-  (crit/quick-bench
-   (format-query select-query-fix-1))
-  (crit/quick-bench
-   (create-query select-query-fix-1))
-  
-  (dotimes [_ 10000]
-    (create-query select-query-fix-1))
-  )
-
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Update tests
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -289,3 +277,15 @@
 
 (deftest update-tests
   (make-update-tests "dev-resources/test-fixtures/update"))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Benchmarking
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(comment
+  (require '[criterium.core :as crit])
+
+  (crit/quick-bench
+   (format-query select-query-fix-1))
+  (crit/quick-bench
+   (create-query select-query-fix-1)))
