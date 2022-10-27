@@ -19,8 +19,6 @@
     (.setBaseURI "http://base-uri.com/")
     (.setPrefix "xsd" "http://www.w3.org/2001/XMLSchema#")))
 
-(def query (Query. prologue))
-
 (defn- expr->str
   [expr]
   (->> expr
