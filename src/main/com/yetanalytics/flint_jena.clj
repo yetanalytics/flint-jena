@@ -128,14 +128,3 @@
         opts-coll   (map (partial merge-opts opts) prologues)
         update-coll (mapv ->update-map prologues opts-coll update-asts)]
     (up/create-updates update-coll)))
-
-#_{:clj-kondo/ignore [:unused-binding]}
-(defn create-update
-  [update & {:keys [spec-ed? iri->datatype aggregate-fns]
-             :or   {spec-ed?      false
-                    iri->datatype ax/xsd-datatype-map
-                    aggregate-fns #{}}}]
-  (create-updates [update]
-                  :spec-ed?      spec-ed?
-                  :iri-datatype  iri->datatype
-                  :aggregate-fns aggregate-fns))
