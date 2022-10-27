@@ -1,9 +1,8 @@
 {:paths ["src/main"]
- :deps {org.clojure/clojure       {:mvn/version "1.10.3"}
-        org.clojure/clojurescript {:mvn/version "1.10.914"}
+ :deps {org.clojure/clojure       {:mvn/version "1.11.1"}
         org.apache.jena/jena-core {:mvn/version "4.6.1"}
         org.apache.jena/jena-arq  {:mvn/version "4.6.1"}
-        com.yetanalytics/flint    {:mvn/version "0.2.0"
+        com.yetanalytics/flint    {:mvn/version "0.2.1"
                                    :exclusions [org.clojure/clojure
                                                 org.clojure/clojurescript]}}
  :aliases
