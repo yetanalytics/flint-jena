@@ -25,6 +25,15 @@
             Target]))
 
 (defmulti new-update
+  "Create and return a new Update instance, whose type (e.g. LOAD, DELETE WHERE,
+   etc.) is determined by `update-type` and its content by `ast-map`. `ast-map`
+   is a map from keywords to Jena objects, e.g.
+   
+     {:with   with-graph
+      :delete delete-quads
+      :insert insert-quads
+      :where  where-element}"
+  {:arglists '([update-type ast-map])}
   (fn [update-type _] update-type))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -276,10 +285,12 @@
 (defn- add-update!
   [^UpdateRequest update-req {:keys [prologue opts update-ast]}]
   (doto update-req
-    (pro/add-prologue! prologue)
+    (pro/add-prologue! prologue) ; Only the last `prologue` is final
     (.add ^Update (update->jena* opts update-ast))))
 
 (defn create-updates
+  "Create an UpdateRequest from `update-map-coll`, where each update map
+   consists of `prologue`, `opts`, and `update-ast`."
   [update-map-coll]
   (let [update-req (UpdateRequest.)
         add-update (partial add-update! update-req)]

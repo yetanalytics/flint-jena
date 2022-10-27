@@ -3,6 +3,7 @@
             [com.yetanalytics.flint.util :as u]))
 
 (defn ast-node-dispatch
+  "Multi-method dispatch based on `ast-node`'s keyword."
   ([ast-node]
    (if-some [k (u/get-keyword ast-node)] k :default))
   ([_ ast-node]
@@ -11,7 +12,9 @@
    (if-some [k (u/get-keyword ast-node)] k :default)))
 
 (defmulti ast-node->jena
-  "Given the AST node `x`, return a Jena query/update builder instance."
+  "Given the `ast-node`, return a Jena query/update builder instance.
+   Applies and/or mutates `opts` whenever needed."
+  {:arglists '([opts ast-node])}
   ast-node-dispatch)
 
 (defmethod ast-node->jena :default [_ ast-node]

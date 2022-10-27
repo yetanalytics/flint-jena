@@ -52,7 +52,10 @@
 (defn- jena-expr-dispatch [_opts op _args]
   (if (symbol? op) op :custom))
 
-(defmulti ast-node->jena-expr jena-expr-dispatch)
+(defmulti ast-node->jena-expr
+  "Instantiate a new Expr object; dispatched on `op`."
+  {:arglists '([opts op args])}
+  jena-expr-dispatch)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Macros

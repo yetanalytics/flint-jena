@@ -37,6 +37,8 @@
   (.setPrefixMapping prologue prefix-ast))
 
 (defn create-prologue
+  "Create a new Prologue instance from `query-update-ast`, based on its
+   `:base` and `:prefixes`."
   [opts [_ query-update-ast]]
   (let [prologue (Prologue.)]
     (->> query-update-ast
@@ -46,6 +48,8 @@
     prologue))
 
 (defn merge-prologues
+  "Merge the two prologues; `pro-2`'s base URI overrides `pro-1`'s (if
+   it exists) and `pro-2`'s prefix mapping gets merged onto `pro-1`'s."
   [^Prologue pro-1 ^Prologue pro-2]
   (let [prologue (.copy pro-1)]
     (when-some [base-uri-2 (.getBaseURI pro-2)]
@@ -58,7 +62,8 @@
     prologue))
 
 (defn add-prologue!
-  [^Prologue query-or-updates ^Prologue prologue]
-  (doto query-or-updates
+  "Add `prologue` to the query or update request."
+  [^Prologue query-or-update-req ^Prologue prologue]
+  (doto query-or-update-req
     (.setBaseURI (.getBaseURI prologue))
     (.setPrefixMapping (.getPrefixMapping prologue))))

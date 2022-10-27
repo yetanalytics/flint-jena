@@ -30,7 +30,11 @@
 ;; Sub-SELECT query
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmulti select-query-add! ast/ast-node-dispatch)
+(defmulti select-query-add!
+  "Add the `ast-node` to `query`, where `query` should be a subquery.
+   See `query/query-add!`."
+  {:arglists '([query ast-node])}
+  ast/ast-node-dispatch)
 
 (defmethod select-query-add! :default [_ _] nil)
 

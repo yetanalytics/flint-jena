@@ -19,7 +19,11 @@
 ;; Multimethods
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmulti query-add! ast/ast-node-dispatch)
+(defmulti query-add!
+  "Add the `ast-node`, which should have been converted into a Jena object
+   via `ast/ast->jena`, to `query`."
+  {:arglists '([query ast-node])}
+  ast/ast-node-dispatch)
 
 (defmethod query-add! :default [_ _] nil)
 
@@ -204,6 +208,8 @@
        (run! (fn [ast-node] (query-add! query ast-node)))))
 
 (defn create-query
+  "Create a new Query instance with the contents of `prologue` and `query-ast`
+   and its type (SELECT, CONSTRUCT, etc.) set by `query-type`."
   [prologue opts [query-type query-ast]]
   (let [qast* (cond-> query-ast
                 (= :query/construct query-type)
