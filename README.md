@@ -1,5 +1,9 @@
 # flint-jena
 
+[![CI](https://github.com/yetanalytics/flint-jena/actions/workflows/test.yml/badge.svg)](https://github.com/yetanalytics/flint-jena/actions/workflows/test.yml)
+[![Clojars Project](https://img.shields.io/clojars/v/com.yetanalytics/flint-jena.svg)](https://clojars.org/com.yetanalytics/flint)
+[![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-5e0b73.svg)](CODE_OF_CONDUCT.md)
+
 A companion library to [Flint](https://github.com/yetanalytics/flint) for the direct compilation of Flint data into [Apache Jena](https://jena.apache.org/)-based SPARQL queries and updates.
 
 ## Installation
