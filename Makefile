@@ -1,9 +1,9 @@
 .phony: test-clj test-cov ci
 
-test-clj:
+test:
 	clj -X:test:run
 
 test-cov:
 	clj -X:test:cov
 
-ci: test-clj
+ci: test
