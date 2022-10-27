@@ -121,7 +121,7 @@
       (let [jena-order-by (->> '[(sum ?v1)]
                                (s/conform ::ms/order-by)
                                (conj [:order-by])
-                               (ast/ast->jena {:query (Query.)}))
+                               (ast/ast->jena {:query-stack (atom [(Query.)])}))
             jena-query    (doto (Query.)
                             (mod/add-order-bys! (second jena-order-by)))
             order-by-agg  (AggSum. (ExprVar. (Var/alloc "v1")))]
@@ -176,7 +176,7 @@
     (let [jena-having (->> '[(+ ?v1 ?v2)]
                            (s/conform ::ms/having)
                            (conj [:having])
-                           (ast/ast->jena {:query (Query.)}))
+                           (ast/ast->jena {:query-stack (atom [(Query.)])}))
           jena-query  (doto (Query.)
                         (mod/add-having! (second jena-having)))
           having-expr (E_Add. (ExprVar. (Var/alloc "v1"))
@@ -188,7 +188,7 @@
     (let [jena-having (->> '[(sum ?v1)]
                            (s/conform ::ms/having)
                            (conj [:having])
-                           (ast/ast->jena {:query (Query.)}))
+                           (ast/ast->jena {:query-stack (atom [(Query.)])}))
           jena-query  (doto (Query.)
                         (mod/add-having! (second jena-having)))
           having-agg  (AggSum. (ExprVar. (Var/alloc "v1")))]
