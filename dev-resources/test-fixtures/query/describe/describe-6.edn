@@ -1,0 +1,5 @@
+;; DESCRIBE with wildcard
+{:prefixes {:foo "<http://foo.org/>"}
+ :describe :*
+ :from     [:foo/graph]
+ :where    [[?x :foo/qux ?z]]}

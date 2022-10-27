@@ -1,0 +1,9 @@
+;; CREATE update with multiple bases overriding each other
+[{:base   "<http://graph-1.org/>"
+  :create [:graph "<foo>"]}
+ {:base   "<http://graph-2.org/>"
+  :create [:graph "<bar>"]}
+ {:base   "<http://graph-3.org/>"
+  :create [:graph "<baz>"]}
+ {:base   "<http://graph-4.org/>"
+  :create [:graph "<qux>"]}]

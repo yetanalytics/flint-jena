@@ -1,0 +1,6 @@
+;; CONSTRUCT WHERE with FROM
+{:prefixes  {:foaf "<http://xmlns.com/foaf/0.1/>"
+             :foo  "<http://foo.org/>"}
+ :construct []
+ :from      [:foo/my-graph]
+ :where     [[?x :foaf/name ?name]]}

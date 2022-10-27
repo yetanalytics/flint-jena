@@ -1,4 +1,4 @@
-;; CONSTRUCT with ORDER BY and LIMIT
+;; CONSTRUCT with ORDER BY and LIMIT + blank nodes
 {:prefixes  {:foaf "<http://xmlns.com/foaf/0.1/>"
              :site "<http://example.org/stats#>"}
  :construct [[_ :foaf/name ?name]]

@@ -1,0 +1,5 @@
+;; SELECT with FROM in a vector and as a prefixed IRI
+{:prefixes {:foaf "<http://xmlns.com/foaf/0.1/>"}
+ :select   [?name]
+ :from     [:foaf/aliceFoaf]
+ :where    [[?x :foaf/name ?name]]}

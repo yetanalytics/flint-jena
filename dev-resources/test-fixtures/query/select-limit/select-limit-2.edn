@@ -3,5 +3,5 @@
  :select   [?name]
  :where    [[?x :foaf/name ?name]]
  :order-by [?name]
- :limit    5
+ :limit    500
  :offset   10}

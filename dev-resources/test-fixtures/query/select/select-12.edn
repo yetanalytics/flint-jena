@@ -1,0 +1,4 @@
+;; SELECT with wildcard
+{:prefixes {:foo "<http://foo.org/>"}
+ :select   :*
+ :where    [[?x :foo/pred ?z]]}
