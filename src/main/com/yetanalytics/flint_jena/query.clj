@@ -10,6 +10,7 @@
   (:import [org.apache.jena.graph Node]
            [org.apache.jena.query Query]
            [org.apache.jena.sparql.core BasicPattern]
+           [org.apache.jena.sparql.lang SyntaxVarScope]
            [org.apache.jena.sparql.syntax Template]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -210,6 +211,9 @@
 ;; Putting it all together
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; See how it's done in the original Jena:
+;; https://github.com/apache/jena/blob/main/jena-arq/src/main/java/org/apache/jena/sparql/lang/SPARQLParser.java
+
 (defn- set-query-type!
   [^Query query query-type]
   (case query-type
@@ -224,6 +228,15 @@
        (ast/ast->jena opts)
        (filter (fn [[k _]] (not (#{:base :prefixes} k))))
        (run! (fn [ast-node] (query-add! query ast-node)))))
+
+;; Unlike vanilla Flint, we perform the scope check after creation, and since
+;; it's done by Jena it shouldn't have that much of an impact performance-wise.
+(defn- finish-query!
+  "Performs post-creation validation to check that all vars are in scope, then
+   set the internal result vars."
+  [^Query query]
+  (SyntaxVarScope/check query)
+  (.resetResultVars query))
 
 (defn create-query
   "Create a new Query instance with the contents of `prologue` and `query-ast`
@@ -240,4 +253,5 @@
     (doto query
       (pro/add-prologue! prologue)
       (set-query-type! query-type)
-      (add-query-clauses! (assoc opts :query query) query-ast*))))
+      (add-query-clauses! (assoc opts :query query) query-ast*)
+      finish-query!)))
