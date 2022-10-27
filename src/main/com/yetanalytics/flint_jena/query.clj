@@ -85,6 +85,8 @@
 ;; CONSTRUCT query helpers
 
 (defn- annotate-construct-bnodes
+  "Annotate the bnodes in the CONSTRUCT clause so that they are converted
+   into Jena blank Nodes intead of blank Vars."
   [query-ast]
   (mapv (fn [[k v :as ast]]
           (if (#{:construct} k)
@@ -92,7 +94,9 @@
             ast))
         query-ast))
 
-(defn- elements->nopath-triples ^BasicPattern [triple-elements]
+(defn- elements->nopath-triples
+  "Convert the coll of ElementPathBlocks `triple-elements` into a BGP."
+  ^BasicPattern [triple-elements]
   (let [acc (TripleCollectorBGP.)]
     (dorun (for [t-elem triple-elements
                  triple (->> (.patternElts ^ElementPathBlock t-elem)
@@ -101,6 +105,18 @@
              (.addTriple acc triple)))
     (.getBGP acc)))
 
+(defn- replace-construct-where
+  "Replaces the `:construct` and `:where` AST nodes with a single
+   `:construct-where` node."
+  [query-ast]
+  (->> query-ast
+       (mapv (fn [[k v]]
+               (cond
+                 (= :construct k) nil
+                 (= :where k)     [:construct-where v]
+                 :else            [k v])))
+       (filter some?)))
+
 ;; Multimethods
 
 (defmethod ast/ast-node->jena :construct
@@ -108,6 +124,9 @@
   [kw (->> triple-elements 
            elements->nopath-triples
            Template.)])
+
+;; Same as for `:where`
+(defmethod ast/ast-node->jena :construct-where [_ where] where)
 
 (defmethod query-add! :construct
   [^Query query [_ construct-template]]
@@ -169,18 +188,6 @@
 (defmethod query-add! :where
   [query [_ where-ast]]
   (where/add-where! query where-ast))
-
-(defn- replace-construct-where
-  "Replaces the `:construct` and `:where` AST nodes with a single
-   `:construct-where` node."
-  [query-ast]
-  (->> query-ast
-       (mapv (fn [[k v]]
-               (cond
-                 (= :construct k) nil
-                 (= :where k)     [:construct-where v]
-                 :else            [k v])))
-       (filter some?)))
 
 (defn- throw-construct-where
   [where-ast]
