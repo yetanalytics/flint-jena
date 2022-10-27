@@ -8,6 +8,7 @@
   (:import [org.apache.jena.graph NodeFactory Triple]
            [org.apache.jena.sparql.core Prologue Var]
            [org.apache.jena.sparql.expr E_Add ExprVar]
+           [org.apache.jena.sparql.lang LabelToNodeMap]
            [org.apache.jena.sparql.syntax ElementBind Template]))
 
 (def prefixes-prologue
@@ -99,8 +100,20 @@
                       {?a {?b #{?c}}}]
                     (s/conform ::qs/construct)
                     (conj [:construct])
-                    (ast/ast->jena {}))
-               (update 1 #(.getTriples ^Template %))))))
+                    (ast/ast->jena {:active-bnode-map (atom :blank-var-map)}))
+               (update 1 #(.getTriples ^Template %)))))
+    (let [res (-> (->> '[[_bnode "<http://foo.org/y>" "<http://foo.org/z>"]]
+                       (s/conform ::qs/construct)
+                       (conj [:construct])
+                       (ast/ast->jena {:blank-node-map   (LabelToNodeMap/createBNodeMap)
+                                       :active-bnode-map (atom :blank-var-map)}))
+                  (update 1 #(.getTriples ^Template %)))]
+      (is (= true
+             (-> res second first .getSubject .isBlank)))
+      (is (= (NodeFactory/createURI "http://foo.org/y")
+             (-> res second first .getPredicate)))
+      (is (= (NodeFactory/createURI "http://foo.org/z")
+             (-> res second first .getObject)))))
   (testing "DESCRIBE"
     (is (= [:describe [(Var/alloc "x")
                        (NodeFactory/createURI "http://foo.org/y")

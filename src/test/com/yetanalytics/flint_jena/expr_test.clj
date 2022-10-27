@@ -34,7 +34,7 @@
   (->> agg-expr
        (s/conform ::es/agg-expr)
        ^Expr (ast/ast->jena {:prologue      prologue
-                             :query         query
+                             :query-stack   (atom [(Query. prologue)])
                              :iri->datatype ax/xsd-datatype-map})
        .toString))
 
@@ -43,7 +43,7 @@
   (->> agg-expr
        (s/conform ::es/agg-expr)
        ^ExprAggregator (ast/ast->jena {:prologue      prologue
-                                       :query         query
+                                       :query-stack   (atom [(Query. prologue)])
                                        :iri->datatype ax/xsd-datatype-map})
        .getAggregator
        .toString))
@@ -221,26 +221,28 @@
     (is (= "AGG <http://fn.com>(?x , ?y)"
            (->> '("<http://fn.com>" ?x ?y)
                 (s/conform ::es/agg-expr)
-                ^ExprAggregator (ast/ast->jena {:prologue      prologue
-                                                :query         query
-                                                :iri->datatype ax/xsd-datatype-map
-                                                :aggregate-fns #{"http://fn.com"}})
+                ^ExprAggregator (ast/ast->jena
+                                 {:prologue      prologue
+                                  :query-stack   (atom [(Query. prologue)])
+                                  :iri->datatype ax/xsd-datatype-map
+                                  :aggregate-fns #{"http://fn.com"}})
                 .getAggregator
                 .toString)))
     (is (= "AGG <http://fn.com>(DISTINCT ?x , ?y)"
            (->> '("<http://fn.com>" ?x ?y :distinct? true)
                 (s/conform ::es/agg-expr)
-                ^ExprAggregator (ast/ast->jena {:prologue      prologue
-                                                :query         query
-                                                :iri->datatype ax/xsd-datatype-map
-                                                :aggregate-fns #{"http://fn.com"}})
+                ^ExprAggregator (ast/ast->jena
+                                 {:prologue      prologue
+                                  :query-stack   (atom [(Query. prologue)])
+                                  :iri->datatype ax/xsd-datatype-map
+                                  :aggregate-fns #{"http://fn.com"}})
                 .getAggregator
                 .toString)))
     (is (= "Custom function 'http://fn.com' not registered as aggregate; cannot use 'distinct?' keyword."
            (try (->> '("<http://fn.com>" ?x ?y :distinct? true)
                      (s/conform ::es/agg-expr)
                      ^Expr (ast/ast->jena {:prologue      prologue
-                                           :query         query
+                                           :query-stack   (atom [(Query. prologue)])
                                            :iri->datatype ax/xsd-datatype-map
                                            :aggregate-fns #{}}))
                 (catch clojure.lang.ExceptionInfo e

@@ -64,8 +64,9 @@
                 ^Node (ast/ast->jena {})
                 .getName))))
   (testing "Blank Nodes"
-    (let [opts {:blank-var-map  (LabelToNodeMap/createVarMap)
-                :blank-node-map (LabelToNodeMap/createBNodeMap)}]
+    (let [opts {:blank-var-map    (LabelToNodeMap/createVarMap)
+                :blank-node-map   (LabelToNodeMap/createBNodeMap)
+                :active-bnode-map (atom :blank-var-map)}]
       (testing "- blank node vars"
         (is (= true
                (->> [:ax/bnode '_0] ^Var (ast/ast->jena opts) .isBlankNodeVar)
@@ -82,13 +83,14 @@
         (is (not= (->> [:ax/bnode '_] ^Var (ast/ast->jena opts) .getName)
                   (->> [:ax/bnode '_] ^Var (ast/ast->jena opts) .getName))))
       (testing "- raw blank nodes"
+        (reset! (get opts :active-bnode-map) :blank-node-map)
         (is (= true
-               (->> [:ax/bnode '_0 true] ^Node (ast/ast->jena opts) .isBlank)
-               (->> [:ax/bnode '_ true] ^Node (ast/ast->jena opts) .isBlank)))
-        (is (= (->> [:ax/bnode '_0 true] ^Node (ast/ast->jena opts) .getBlankNodeLabel)
-               (->> [:ax/bnode '_0 true] ^Node (ast/ast->jena opts) .getBlankNodeLabel)))
-        (is (not= (->> [:ax/bnode '_ true] ^Node (ast/ast->jena opts) .getBlankNodeLabel)
-                  (->> [:ax/bnode '_ true] ^Node (ast/ast->jena opts) .getBlankNodeLabel)))))))
+               (->> [:ax/bnode '_0] ^Node (ast/ast->jena opts) .isBlank)
+               (->> [:ax/bnode '_] ^Node (ast/ast->jena opts) .isBlank)))
+        (is (= (->> [:ax/bnode '_0] ^Node (ast/ast->jena opts) .getBlankNodeLabel)
+               (->> [:ax/bnode '_0] ^Node (ast/ast->jena opts) .getBlankNodeLabel)))
+        (is (not= (->> [:ax/bnode '_] ^Node (ast/ast->jena opts) .getBlankNodeLabel)
+                  (->> [:ax/bnode '_] ^Node (ast/ast->jena opts) .getBlankNodeLabel)))))))
 
 (deftest literal-test
   (testing "Literals"

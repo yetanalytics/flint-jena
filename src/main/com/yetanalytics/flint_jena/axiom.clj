@@ -1,6 +1,5 @@
 (ns com.yetanalytics.flint-jena.axiom
-  (:require [clojure.walk                          :as w]
-            [com.yetanalytics.flint-jena.ast       :as ast]
+  (:require [com.yetanalytics.flint-jena.ast       :as ast]
             [com.yetanalytics.flint.axiom.protocol :as p]
             [com.yetanalytics.flint.axiom.impl])
   (:import [org.apache.jena.atlas.lib EscapeStr]
@@ -30,22 +29,6 @@
 
 (defn blank-var-map []
   (LabelToNodeMap/createVarMap))
-
-(defmulti annotate-raw-bnode
-  "Annotate whether a blank node should be compiled as a Node_Blank object
-   (i.e. \"raw bnode\") or as a Var object. The annotation becomes a third
-   entry in the AST vector."
-  ast/ast-node-dispatch)
-
-(defmethod annotate-raw-bnode :default [ast-node] ast-node)
-
-(defmethod annotate-raw-bnode :ax/bnode [[bnode-type bnode-str]]
-  [bnode-type bnode-str true])
-
-(defn annotate-raw-bnodes
-  "Walk the `ast` tree and mark all blank nodes as raw."
-  [ast]
-  (w/postwalk annotate-raw-bnode ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Literal Datatypes
@@ -153,12 +136,12 @@
            :prologue prologue})))
 
 (defn- throw-bnode-map-not-found
-  [bnode-str raw-bnode?]
+  [bnode-str active-bnode-map-k]
   (throw (ex-info
           (format "Blank node map not present for bnode '%s'" bnode-str)
           {:kind  ::bnode-map-not-found
            :bnode bnode-str
-           :type  (if raw-bnode? :blank-node-map :blank-var-map)})))
+           :type  active-bnode-map-k})))
 
 (defn- throw-datatype-not-found
   [iri-datatype iri]
@@ -196,12 +179,12 @@
     (-> var-str (.substring 1) Var/alloc)))
 
 (defmethod ast/ast-node->jena :ax/bnode
-  [{:keys [blank-var-map blank-node-map]} [_ bnode raw-bnode?]]
+  [{:keys [active-bnode-map] :as opts} [_ bnode]]
   (let [^String bnode-string    (p/-format-bnode bnode)
-        ^LabelToNodeMap bnode-m (if raw-bnode? blank-node-map blank-var-map)]
+        ^LabelToNodeMap bnode-m (get opts @active-bnode-map)]
     (cond
       (nil? bnode-m)
-      (throw-bnode-map-not-found bnode-string raw-bnode?)
+      (throw-bnode-map-not-found bnode-string @active-bnode-map)
       (= "[]" bnode-string)
       (-> bnode-m .allocNode)
       :else

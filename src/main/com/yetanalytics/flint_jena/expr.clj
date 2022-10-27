@@ -248,12 +248,16 @@
 ;; Aggregate Expressions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- assert-query
-  "Assert that the query being construct is present in the opts map."
-  [query]
-  (when (nil? query)
-    (throw (ex-info "Missing query in opts map!"
-                    {:kind ::query-not-present}))))
+;; More detailed error than NullPointerException
+(defn- assert-query-stack
+  [query-stack]
+  (cond
+    (nil? query-stack)
+    (throw (ex-info "Missing query stack when building aggregate!"
+                    {:kind ::query-stack-not-present}))
+    (empty? @query-stack)
+    (throw (ex-info "Empty query stack when building aggregate!"
+                    {:kind ::query-stack-empty}))))
 
 (defn- assert-no-nested-aggs
   "Enforce Jena's requirement that aggregates cannot be nested. (Note that
@@ -270,14 +274,15 @@
 (defn- agg->expr
   "Return a new aggregate expression with a bound variable.
    
-   IMPORTANT: This applies a side effect to the `query` being constructed.
+   IMPORTANT: This applies a side effect to the `query-stack` being constructed.
    Unfortunately, Jena makes it extremely difficult to perform this operation
-   in a pure functional manner, but since internally the aggregate maps are
-   different fields from the query body this should be fine."
-  [{:keys [^Query query]} ^Aggregator agg]
-  (assert-query query)
-  ;; .allocAggregate returns the new agg expr
-  (.allocAggregate query agg))
+   in a pure functional manner, hence the need to mutate the fields of the
+   top-most query in `query-stack`."
+  [{:keys [query-stack]} ^Aggregator agg]
+  (assert-query-stack query-stack)
+  (let [^Query query (-> query-stack deref peek)]
+    ;; .allocAggregate returns the new agg expr
+    (.allocAggregate query agg)))
 
 (defmethod ast-node->jena-expr 'sum
   [{dist? :distinct? :or {dist? false} :as opts} op [arg :as args]]
@@ -338,9 +343,9 @@
                    :uri  fn-uri})))
 
 (defmethod ast-node->jena-expr :custom
-  [{aggs  :aggregate-fns
-    query :query
-    ?dist :distinct?}
+  [{aggs    :aggregate-fns
+    ?dist   :distinct?
+    queries :query-stack}
    ^Node fn-op
    ^List fn-args]
   (let [fn-uri    (.getURI fn-op)
@@ -348,11 +353,11 @@
     (cond
       ;; Custom Aggregate
       (contains? aggs fn-uri)
-      (do (assert-no-nested-aggs fn-uri fn-args)
-          (assert-query query)
+      (do (assert-query-stack queries)
+          (assert-no-nested-aggs fn-uri fn-args)
           (->> expr-list
                (AggregatorFactory/createCustom fn-uri (boolean ?dist))
-               (.allocAggregate query)))
+               (.allocAggregate (-> queries deref peek))))
       ;; Custom Non-aggregate
       (nil? ?dist)
       (E_Function. fn-uri expr-list)

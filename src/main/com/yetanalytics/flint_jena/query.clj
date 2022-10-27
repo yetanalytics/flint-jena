@@ -1,6 +1,5 @@
 (ns com.yetanalytics.flint-jena.query
   (:require [com.yetanalytics.flint-jena.ast      :as ast]
-            [com.yetanalytics.flint-jena.axiom    :as ax]
             [com.yetanalytics.flint-jena.modifier :as mod]
             [com.yetanalytics.flint-jena.prologue :as pro]
             [com.yetanalytics.flint-jena.select   :as sel]
@@ -82,15 +81,15 @@
 
 ;; CONSTRUCT query helpers
 
-(defn- annotate-construct-bnodes
-  "Annotate the bnodes in the CONSTRUCT clause so that they are converted
-   into Jena blank Nodes intead of blank Vars."
-  [query-ast]
-  (mapv (fn [[k v :as ast]]
-          (if (#{:construct} k)
-            [k (ax/annotate-raw-bnodes v)]
-            ast))
-        query-ast))
+;; Need to set how blank nodes are conformed in CONSTRUCT triples.
+
+(defmethod ast/ast-node->jena-pre :construct
+  [{:keys [active-bnode-map]} _]
+  (reset! active-bnode-map :blank-node-map))
+
+(defmethod ast/ast-node->jena-post :construct
+  [{:keys [active-bnode-map]} _]
+  (reset! active-bnode-map :blank-var-map))
 
 (defn- replace-construct-where
   "Replaces the `:construct` and `:where` AST nodes with a single
@@ -225,8 +224,8 @@
 (defn- add-query-clauses!
   [query opts query-ast]
   (->> query-ast
-       (ast/ast->jena opts)
        (filter (fn [[k _]] (not (#{:base :prefixes} k))))
+       (ast/ast->jena opts)
        (run! (fn [ast-node] (query-add! query ast-node)))))
 
 ;; Unlike vanilla Flint, we perform the scope check after creation, and since
@@ -241,17 +240,16 @@
 (defn create-query
   "Create a new Query instance with the contents of `prologue` and `query-ast`
    and its type (SELECT, CONSTRUCT, etc.) set by `query-type`."
-  [prologue opts [query-type query-ast]]
+  [prologue {:keys [query-stack] :as opts} [query-type query-ast]]
   (let [construct? (= :query/construct query-type)
         query-ast* (cond-> query-ast
-                     construct?
-                     annotate-construct-bnodes
                      (and construct?
                           (empty? (get-sub-ast query-ast :construct)))
                      replace-construct-where)
-        query (Query.)]
+        query      (Query.)]
+    (swap! query-stack conj query)
     (doto query
       (pro/add-prologue! prologue)
       (set-query-type! query-type)
-      (add-query-clauses! (assoc opts :query query) query-ast*)
+      (add-query-clauses! opts query-ast*)
       finish-query!)))

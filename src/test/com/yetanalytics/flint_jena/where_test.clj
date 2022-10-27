@@ -6,7 +6,7 @@
             [com.yetanalytics.flint-jena.axiom :as ax]
             [com.yetanalytics.flint.spec.where :as ws])
   (:import [org.apache.jena.graph Node NodeFactory Triple]
-           [org.apache.jena.query QueryFactory]
+           [org.apache.jena.query Query QueryFactory]
            [org.apache.jena.sparql.core Prologue Var]
            [org.apache.jena.sparql.expr E_Exists]
            [org.apache.jena.sparql.util NodeIsomorphismMap]
@@ -210,7 +210,8 @@
          (->> '{:select [?x ?y ?z]
                 :where  [[?x ?y ?z]]}
               (s/conform ::ws/where)
-              (ast/ast->jena {:prologue prologue}))
+              (ast/ast->jena {:prologue    prologue
+                              :query-stack (atom [(Query. prologue)])}))
          (NodeIsomorphismMap.)))
     (is (.equalTo
          (ElementSubQuery. subquery-fix-2)
@@ -219,7 +220,8 @@
                 :group-by [?x]
                 :having   [(= ?x ?z)]}
               (s/conform ::ws/where)
-              (ast/ast->jena {:prologue prologue}))
+              (ast/ast->jena {:prologue    prologue
+                              :query-stack (atom [(Query. prologue)])}))
          (NodeIsomorphismMap.)))
     (is (.equalTo
          (ElementSubQuery. subquery-fix-3)
@@ -229,7 +231,8 @@
                 :limit           100
                 :offset          2}
               (s/conform ::ws/where)
-              (ast/ast->jena {:prologue prologue}))
+              (ast/ast->jena {:prologue    prologue
+                              :query-stack (atom [(Query. prologue)])}))
          (NodeIsomorphismMap.)))
     (is (.equalTo
          (ElementSubQuery. subquery-fix-4)
@@ -237,7 +240,8 @@
                 :where          [[?x ?y ?z]]
                 :values         {?d ["<http://foo.org/bar>"]}}
               (s/conform ::ws/where)
-              (ast/ast->jena {:prologue prologue}))
+              (ast/ast->jena {:prologue    prologue
+                              :query-stack (atom [(Query. prologue)])}))
          (NodeIsomorphismMap.)))
     (let [subquery (ElementSubQuery. subquery-fix-1)
           triple   (doto (ElementPathBlock.)
@@ -251,5 +255,6 @@
                   [:where {:select [?x ?y ?z]
                            :where  [[?x ?y ?z]]}]]
                 (s/conform ::ws/where)
-                (ast/ast->jena {:prologue prologue}))
+                (ast/ast->jena {:prologue    prologue
+                                :query-stack (atom [(Query. prologue)])}))
            (NodeIsomorphismMap.))))))

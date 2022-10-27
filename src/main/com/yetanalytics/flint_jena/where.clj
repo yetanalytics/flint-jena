@@ -86,17 +86,39 @@
   [query [_ where-ast]]
   (add-where! query where-ast))
 
+;; More detailed error than NullPointerException
+(defn- assert-query-stack
+  [query-stack req-empty?]
+  (cond
+    (nil? query-stack)
+    (throw (ex-info "Missing query stack when building subqueries!"
+                    {:kind ::query-stack-not-present}))
+    (and req-empty? (empty? @query-stack))
+    (throw (ex-info "Empty query stack when building subqueries!"
+                    {:kind ::query-stack-empty}))))
+
 (defn- create-query
-  [query-ast]
-  (let [query (Query.)]
-    (.setQuerySelectType query)
-    (run! (fn [ast-node] (select-query-add! query ast-node))
-          query-ast)
-    query))
+  [query query-ast]
+  (.setQuerySelectType query)
+  (run! (fn [ast-node] (select-query-add! query ast-node))
+        query-ast)
+  query)
+
+(defmethod ast/ast-node->jena-pre :where-sub/select
+  [{:keys [query-stack]} _]
+  (assert-query-stack query-stack false)
+  (swap! query-stack conj (Query.)))
+
+(defmethod ast/ast-node->jena-post :where-sub/select
+  [{:keys [query-stack]} _]
+  (assert-query-stack query-stack true)
+  (swap! query-stack pop))
 
 (defmethod ast/ast-node->jena :where-sub/select
-  [_ [_ sub-query]]
-  (ElementSubQuery. (create-query sub-query)))
+  [{:keys [query-stack]} [_ sub-query]]
+  (assert-query-stack query-stack true)
+  (let [query (-> query-stack deref peek)]
+    (ElementSubQuery. (create-query query sub-query))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; WHERE clauses

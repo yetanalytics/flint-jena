@@ -63,12 +63,24 @@
    :aggregate-fns #{}})
 
 (defn- merge-opts
-  "Construct the final opts map, overriding defaults and adding internal opts."
+  "Construct the final opts map, overriding defaults and adding internal opts.
+   Said internal opts include:
+   - `prologue`: the prologue from which to reference the base URI and
+     prefix mappings.
+   - `blank-node-map`: A LabelToNode mapping that conforms blank nodes into
+     Var objects. Used in most clauses.
+   - `blank-var-map`: A LabelToNode mapping that conforms blank nodes into
+     Node_Blank objects. Used in CONSTRUCT triples.
+   - `active-bnode-map`: An atom referencing which bnode map to currently use.
+   - `query-stack`: An atom containing the current stack of (sub)queries. Each
+     query is used to construct new aggregate expressions."
   [opts prologue]
   (-> (merge default-opts opts)
-      (merge {:prologue       prologue
-              :blank-node-map (ax/blank-node-map)
-              :blank-var-map  (ax/blank-var-map)})))
+      (merge {:prologue         prologue
+              :blank-node-map   (ax/blank-node-map)
+              :blank-var-map    (ax/blank-var-map)
+              :active-bnode-map (atom :blank-var-map)
+              :query-stack      (atom [])})))
 
 (defn- conj-prologue
   "Reduce function where `prologue-coll` is the accumulator, and `update-ast`
