@@ -16,7 +16,7 @@
             TripleCollectorBGP]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Multimethods
+;; Multimethods and Helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defmulti query-add!
@@ -26,6 +26,11 @@
   ast/ast-node-dispatch)
 
 (defmethod query-add! :default [_ _] nil)
+
+(defn- get-sub-ast
+  "Return the sub-ast from the `query-ast` coll by its `ast-key`."
+  [query-ast ast-key]
+  (some (fn [[k v]] (when (#{ast-key} k) v)) query-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Graph URIs
@@ -78,14 +83,6 @@
 ;; CONSTRUCT ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; CONSTRUCT query helpers
-
-(defn- get-construct-ast
-  [query-ast]
-  (some (fn [[k v]] (when (#{:construct} k) v)) query-ast))
-
-(defn- construct-where?
-  [query-ast]
-  (empty? (get-construct-ast query-ast)))
 
 (defn- annotate-construct-bnodes
   [query-ast]
@@ -165,28 +162,49 @@
   [query [_ values-ast]]
   (values/add-values! query values-ast))
 
-(defn- throw-construct-where [where-ast]
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; WHERE pattern
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmethod query-add! :where
+  [query [_ where-ast]]
+  (where/add-where! query where-ast))
+
+(defn- replace-construct-where
+  "Replaces the `:construct` and `:where` AST nodes with a single
+   `:construct-where` node."
+  [query-ast]
+  (->> query-ast
+       (mapv (fn [[k v]]
+               (cond
+                 (= :construct k) nil
+                 (= :where k)     [:construct-where v]
+                 :else            [k v])))
+       (filter some?)))
+
+(defn- throw-construct-where
+  [where-ast]
   (throw (ex-info "CONSTRUCT WHERE must only consist of Basic Graph Patterns!"
                   {:kind ::invalid-construct-where
                    :where-ast where-ast})))
 
-;; In case the CONSTRUCT clause is empty
-;; This should always be called after the CONSTRUCT since the AST is sorted
-(defn- add-where-as-construct!
+(defn- add-construct-where!
+  "Add function that should be called whenever the CONSTRUCT clause is empty.
+   Adds the CONSTRUCT template based on the WHERE pattern; throws an exception
+   if said pattern is not a BGP. Called in conjunction with the regular
+   `add-where!`"
   [^Query query where-ast]
-  (when (and (.isConstructType query)
-             (-> query .getConstructTemplate .getTriples not-empty nil?))
-    (try (->> (.getElements ^ElementGroup where-ast)
-              elements->nopath-triples
-              Template.
-              (.setConstructTemplate query))
-         (catch Exception _
-           (throw-construct-where where-ast)))))
+  (try (->> (.getElements ^ElementGroup where-ast)
+            elements->nopath-triples
+            Template.
+            (.setConstructTemplate query))
+       (catch Exception _
+         (throw-construct-where where-ast))))
 
-(defmethod query-add! :where
+(defmethod query-add! :construct-where
   [query [_ where-ast]]
   (where/add-where! query where-ast)
-  (add-where-as-construct! query where-ast))
+  (add-construct-where! query where-ast))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Putting it all together
@@ -211,14 +229,15 @@
   "Create a new Query instance with the contents of `prologue` and `query-ast`
    and its type (SELECT, CONSTRUCT, etc.) set by `query-type`."
   [prologue opts [query-type query-ast]]
-  (let [qast* (cond-> query-ast
-                (= :query/construct query-type)
-                annotate-construct-bnodes)
-        opts* (cond-> opts
-                (= :query/construct query-type)
-                (assoc :construct-where? (construct-where? qast*)))
+  (let [construct? (= :query/construct query-type)
+        query-ast* (cond-> query-ast
+                     construct?
+                     annotate-construct-bnodes
+                     (and construct?
+                          (empty? (get-sub-ast query-ast :construct)))
+                     replace-construct-where)
         query (Query.)]
     (doto query
       (pro/add-prologue! prologue)
       (set-query-type! query-type)
-      (add-query-clauses! (assoc opts* :query query) qast*))))
+      (add-query-clauses! (assoc opts :query query) query-ast*))))
