@@ -55,10 +55,9 @@
 
 (defn- merge-opts
   [opts prologue]
-  (-> (merge {:iri->datatype ax/xsd-datatype-map} opts)
-      (merge {:prologue       prologue
-              :blank-node-map (ax/blank-node-map)
-              :blank-var-map  (ax/blank-var-map)})))
+  (merge opts {:prologue       prologue
+               :blank-node-map (ax/blank-node-map)
+               :blank-var-map  (ax/blank-var-map)}))
 
 (defn- conj-prologue
   [opts prologue-coll update-ast]
@@ -79,18 +78,24 @@
 ;; Putting it all together
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+#_{:clj-kondo/ignore [:unused-binding]}
 (defn create-query
-  [query & {:keys [spec-ed?]
-            :or   {spec-ed? false}
+  [query & {:keys [spec-ed? iri->datatype aggregate-fns]
+            :or   {spec-ed?      false
+                   iri->datatype ax/xsd-datatype-map
+                   aggregate-fns #{}}
             :as   opts}]
   (let [query-ast (conform-query spec-ed? query)
         prologue  (pro/create-prologue opts query-ast)
         opts*     (merge-opts opts prologue)]
     (qu/create-query prologue opts* query-ast)))
 
+#_{:clj-kondo/ignore [:unused-binding]}
 (defn create-updates
-  [updates & {:keys [spec-ed?]
-              :or   {spec-ed? false}
+  [updates & {:keys [spec-ed? iri->datatype aggregate-fns]
+              :or   {spec-ed?      false
+                     iri->datatype ax/xsd-datatype-map
+                     aggregate-fns #{}}
               :as   opts}]
   (let [update-asts (map #(conform-update spec-ed? %) updates)
         prologues   (reduce (partial conj-prologue opts) [] update-asts)
@@ -98,7 +103,13 @@
         update-coll (mapv ->update-map prologues opts-coll update-asts)]
     (up/create-updates update-coll)))
 
+#_{:clj-kondo/ignore [:unused-binding]}
 (defn create-update
-  [update & {:keys [spec-ed?]
-             :or   {spec-ed? false}}]
-  (create-updates [update] :spec-ed? spec-ed?))
+  [update & {:keys [spec-ed? iri->datatype aggregate-fns]
+             :or   {spec-ed?      false
+                    iri->datatype ax/xsd-datatype-map
+                    aggregate-fns #{}}}]
+  (create-updates [update]
+                  :spec-ed?      spec-ed?
+                  :iri-datatype  iri->datatype
+                  :aggregate-fns aggregate-fns))
