@@ -243,4 +243,3 @@
 (defmethod ast/ast-node->jena :ax/numeric [_ [_ num]] num)
 
 (defmethod ast/ast-node->jena :ax/wildcard [_ _] :*)
-

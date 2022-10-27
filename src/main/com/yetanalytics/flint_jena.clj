@@ -26,6 +26,8 @@
    :clauses error-loc-kws})
 
 (defn- conform-sparql
+  "Convert from Flint concrete syntax to the internal abstract syntax tree.
+   Has the exact same functionality as in vanilla Flint."
   ([error-kw spec spec-err? sparql]
    (conform-sparql error-kw spec spec-err? sparql nil))
   ([error-kw spec spec-err? sparql index]
@@ -53,13 +55,24 @@
 ;; Additional Helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+;; Need this since kwarg destructuring doesn't correctly apply default args
+(def default-opts
+  "The default options for flint-jena API functions."
+  {:spec-ed?      false
+   :iri->datatype ax/xsd-datatype-map
+   :aggregate-fns #{}})
+
 (defn- merge-opts
+  "Construct the final opts map, overriding defaults and adding internal opts."
   [opts prologue]
-  (merge opts {:prologue       prologue
-               :blank-node-map (ax/blank-node-map)
-               :blank-var-map  (ax/blank-var-map)}))
+  (-> (merge default-opts opts)
+      (merge {:prologue       prologue
+              :blank-node-map (ax/blank-node-map)
+              :blank-var-map  (ax/blank-var-map)})))
 
 (defn- conj-prologue
+  "Reduce function where `prologue-coll` is the accumulator, and `update-ast`
+   is the next AST from which to extract the prologue from."
   [opts prologue-coll update-ast]
   (if-some [prev-pro (last prologue-coll)]
     (let [next-pro  (pro/create-prologue opts update-ast)
@@ -69,6 +82,7 @@
       (conj prologue-coll next-pro))))
 
 (defn- ->update-map
+  "Convert the args into a map arg accepted by `update/create-updates`."
   [prologue opts update-ast]
   {:prologue   prologue
    :opts       opts
