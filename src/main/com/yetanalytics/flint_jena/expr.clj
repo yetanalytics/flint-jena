@@ -245,9 +245,24 @@
 ;; Aggregate Expressions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- throw-missing-query []
-  (throw (ex-info "Missing query in opts map!"
-                  {:kind ::query-not-present})))
+(defn- assert-query
+  "Assert that the query being construct is present in the opts map."
+  [query]
+  (when (nil? query)
+    (throw (ex-info "Missing query in opts map!"
+                    {:kind ::query-not-present}))))
+
+(defn- assert-no-nested-aggs
+  "Enforce Jena's requirement that aggregates cannot be nested. (Note that
+   this is not required by the SPARQL spec, so vanilla Flint does not check
+   for it.)"
+  [op args]
+  (when (some #(instance? ExprAggregator %) args)
+    (throw (ex-info (format "Nested aggregate is not allowed in '%s'!"
+                            (name op))
+                    {:kind     ::nested-aggregate
+                     :agg-op   (name op)
+                     :agg-args args}))))
 
 (defn- agg->expr
   "Return a new aggregate expression with a bound variable.
@@ -257,44 +272,52 @@
    in a pure functional manner, but since internally the aggregate maps are
    different fields from the query body this should be fine."
   [{:keys [^Query query]} ^Aggregator agg]
-  (if (some? query)
-    (.allocAggregate query agg) ; Returns a new expr
-    (throw-missing-query)))
+  (assert-query query)
+  ;; .allocAggregate returns the new agg expr
+  (.allocAggregate query agg))
 
 (defmethod ast-node->jena-expr 'sum
-  [{dist? :distinct? :or {dist? false} :as opts} _ args]
-  (agg->expr opts (AggregatorFactory/createSum dist? (first args))))
+  [{dist? :distinct? :or {dist? false} :as opts} op [arg :as args]]
+  (assert-no-nested-aggs op args)
+  (agg->expr opts (AggregatorFactory/createSum dist? arg)))
 
 (defmethod ast-node->jena-expr 'min
-  [{dist? :distinct? :or {dist? false} :as opts} _ args]
-  (agg->expr opts (AggregatorFactory/createMin dist? (first args))))
+  [{dist? :distinct? :or {dist? false} :as opts} op [arg :as args]]
+  (assert-no-nested-aggs op args)
+  (agg->expr opts (AggregatorFactory/createMin dist? arg)))
 
 (defmethod ast-node->jena-expr 'max
-  [{dist? :distinct? :or {dist? false} :as opts} _ args]
-  (agg->expr opts (AggregatorFactory/createMax dist? (first args))))
+  [{dist? :distinct? :or {dist? false} :as opts} op [arg :as args]]
+  (assert-no-nested-aggs op args)
+  (agg->expr opts (AggregatorFactory/createMax dist? arg)))
 
 (defmethod ast-node->jena-expr 'avg
-  [{dist? :distinct? :or {dist? false} :as opts} _ args]
-  (agg->expr opts (AggregatorFactory/createAvg dist? (first args))))
+  [{dist? :distinct? :or {dist? false} :as opts} op [arg :as args]]
+  (assert-no-nested-aggs op args)
+  (agg->expr opts (AggregatorFactory/createAvg dist? arg)))
 
 (defmethod ast-node->jena-expr 'sample
-  [{dist? :distinct? :or {dist? false} :as opts} _ args]
-  (agg->expr opts (AggregatorFactory/createSample dist? (first args))))
+  [{dist? :distinct? :or {dist? false} :as opts} op [arg :as args]]
+  (assert-no-nested-aggs op args)
+  (agg->expr opts (AggregatorFactory/createSample dist? arg)))
 
 (defmethod ast-node->jena-expr 'count
-  [{dist? :distinct? :or {dist? false} :as opts} _ args]
-  (agg->expr
-   opts
-   (if (= :* (first args))
-     (AggregatorFactory/createCount dist?)
-     (AggregatorFactory/createCountExpr dist? (first args)))))
+  [{dist? :distinct? :or {dist? false} :as opts} op [arg :as args]]
+  (or (= :* arg)
+      (assert-no-nested-aggs op args))
+  (if (= :* arg)
+    (agg->expr opts (AggregatorFactory/createCount dist?))
+    (agg->expr opts (AggregatorFactory/createCountExpr dist? arg))))
 
 (defmethod ast-node->jena-expr 'group-concat
   [{dist? :distinct?
     ?sep  :separator
     :or   {dist? false}
-    :as   opts} _ args]
-  (agg->expr opts (AggregatorFactory/createGroupConcat dist? (first args) ?sep nil)))
+    :as   opts}
+   op
+   [arg :as args]]
+  (assert-no-nested-aggs op args)
+  (agg->expr opts (AggregatorFactory/createGroupConcat dist? arg ?sep nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Custom Expressions
@@ -313,17 +336,20 @@
 
 (defmethod ast-node->jena-expr :custom
   [{aggs  :aggregate-fns
+    query :query
     ?dist :distinct?}
    ^Node fn-op
-   ^java.util.List fn-args]
+   ^List fn-args]
   (let [fn-uri    (.getURI fn-op)
         expr-list (ExprList. fn-args)]
     (cond
       ;; Custom Aggregate
       (contains? aggs fn-uri)
-      (ExprAggregator.
-       (Var/alloc (str (java.util.UUID/randomUUID)))
-       (AggregatorFactory/createCustom fn-uri (boolean ?dist) expr-list))
+      (do (assert-no-nested-aggs fn-uri fn-args)
+          (assert-query query)
+          (->> expr-list
+               (AggregatorFactory/createCustom fn-uri (boolean ?dist))
+               (.allocAggregate query)))
       ;; Custom Non-aggregate
       (nil? ?dist)
       (E_Function. fn-uri expr-list)

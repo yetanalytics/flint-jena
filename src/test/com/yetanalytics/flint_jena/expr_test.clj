@@ -185,7 +185,11 @@
            (-> '(* (+ 2 3) 4) agg-expr->str)))
     (is (= "(! (|| true (&& false false)))"
            (-> '(not (or true (and false false))) expr->str)
-           (-> '(not (or true (and false false))) agg-expr->str))))
+           (-> '(not (or true (and false false))) agg-expr->str)))
+    (is (= "Nested aggregate is not allowed in 'sum'!"
+           (try (agg-expr->agg-str '(sum (min ?x)))
+                (catch clojure.lang.ExceptionInfo e
+                  (ex-message e))))))
   (testing "Aggregate expressions"
     (are [expr-str expr]
          (= expr-str (agg-expr->agg-str expr))
@@ -218,6 +222,7 @@
            (->> '("<http://fn.com>" ?x ?y)
                 (s/conform ::es/agg-expr)
                 ^ExprAggregator (ast/ast->jena {:prologue      prologue
+                                                :query         query
                                                 :iri->datatype ax/xsd-datatype-map
                                                 :aggregate-fns #{"http://fn.com"}})
                 .getAggregator
@@ -226,6 +231,7 @@
            (->> '("<http://fn.com>" ?x ?y :distinct? true)
                 (s/conform ::es/agg-expr)
                 ^ExprAggregator (ast/ast->jena {:prologue      prologue
+                                                :query         query
                                                 :iri->datatype ax/xsd-datatype-map
                                                 :aggregate-fns #{"http://fn.com"}})
                 .getAggregator
@@ -234,6 +240,7 @@
            (try (->> '("<http://fn.com>" ?x ?y :distinct? true)
                      (s/conform ::es/agg-expr)
                      ^Expr (ast/ast->jena {:prologue      prologue
+                                           :query         query
                                            :iri->datatype ax/xsd-datatype-map
                                            :aggregate-fns #{}}))
                 (catch clojure.lang.ExceptionInfo e

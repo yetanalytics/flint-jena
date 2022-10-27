@@ -125,13 +125,9 @@
    instances. All numeric type IRIs are mapped to either `XSDinteger` or
    `XSDdecimal`, to match how the Jena parser assigns numeric literal types."
   (let [register-integers (partial reduce
-                                   #(register-datatype %1
-                                                       %2
-                                                       XSDDatatype/XSDinteger))
+                                   #(register-datatype %1 %2 XSDDatatype/XSDinteger))
         register-decimals (partial reduce
-                                   #(register-datatype %1
-                                                       %2
-                                                       XSDDatatype/XSDdecimal))]
+                                   #(register-datatype %1 %2 XSDDatatype/XSDdecimal))]
     (-> xsd-datatype-map*
         (register-integers [XSDDatatype/XSDbyte
                             XSDDatatype/XSDshort
@@ -156,12 +152,21 @@
            :iri      iri
            :prologue prologue})))
 
+(defn- throw-bnode-map-not-found
+  [bnode-str raw-bnode?]
+  (throw (ex-info
+          (format "Blank node map not present for bnode '%s'" bnode-str)
+          {:kind  ::bnode-map-not-found
+           :bnode bnode-str
+           :type  (if raw-bnode? :blank-node-map :blank-var-map)})))
+
 (defn- throw-datatype-not-found
   [iri-datatype iri]
-  (throw (ex-info (format "Datatype cannot be retrieved for IRI '%s'." iri)
-                  {:kind      ::datatype-not-found
-                   :iri       iri
-                   :datatypes iri-datatype})))
+  (throw (ex-info
+          (format "Datatype cannot be retrieved for IRI '%s'." iri)
+          {:kind      ::datatype-not-found
+           :iri       iri
+           :datatypes iri-datatype})))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Node Axioms
@@ -194,8 +199,12 @@
   [{:keys [blank-var-map blank-node-map]} [_ bnode raw-bnode?]]
   (let [^String bnode-string    (p/-format-bnode bnode)
         ^LabelToNodeMap bnode-m (if raw-bnode? blank-node-map blank-var-map)]
-    (if (= "[]" bnode-string)
+    (cond
+      (nil? bnode-m)
+      (throw-bnode-map-not-found bnode-string raw-bnode?)
+      (= "[]" bnode-string)
       (-> bnode-m .allocNode)
+      :else
       (-> bnode-m (.asNode (.substring bnode-string 1))))))
 
 (defn- iri->dt
