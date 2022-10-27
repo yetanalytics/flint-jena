@@ -2,6 +2,7 @@
   (:require [com.yetanalytics.flint-jena.ast      :as ast]
             [com.yetanalytics.flint-jena.modifier :as mod]
             [com.yetanalytics.flint-jena.select   :as sel]
+            [com.yetanalytics.flint-jena.triple   :as t]
             [com.yetanalytics.flint-jena.values   :as values])
   (:import [org.apache.jena.graph Node]
            [org.apache.jena.query Query]
@@ -16,6 +17,13 @@
             ElementService
             ElementSubQuery
             ElementUnion]))
+
+;; ElementUnion is the other element with multiple sub-elements but we
+;; don't need a getter for that.
+(defn get-sub-elements
+  "Get the sub-elements of an ElementGroup as a list of elements."
+  [^ElementGroup group-element]
+  (.getElements group-element))
 
 (defmethod ast/ast-node->jena :where [_ where] where)
 
@@ -101,21 +109,15 @@
 (defn- path-block? [element]
   (instance? ElementPathBlock element))
 
-(defn- group-path-blocks [pblock-elements]
-  (let [acc (ElementPathBlock.)]
-    (dorun (for [^ElementPathBlock pb  pblock-elements
-                 element-pblock-triple (iterator-seq (.patternElts pb))]
-             (.addTriplePath acc element-pblock-triple)))
-    [acc]))
-
 (defmethod ast/ast-node->jena :where-sub/where
   [_ [_ elements]]
   (let [elem-partitions (partition-by path-block? elements)
         group-element   (ElementGroup.)]
     (->> elem-partitions
          (mapcat (fn [elem-part]
-                   (cond->> elem-part
-                     (path-block? (first elem-part)) group-path-blocks)))
+                   (if (path-block? (first elem-part))
+                     [(t/triple-elements->element elem-part)]
+                     elem-part)))
          (run! (fn [element]
                  (.addElement group-element element))))
     group-element))

@@ -1,8 +1,9 @@
 (ns com.yetanalytics.flint-jena.update
   (:require [com.yetanalytics.flint-jena.ast      :as ast]
-            [com.yetanalytics.flint-jena.prologue :as pro])
+            [com.yetanalytics.flint-jena.prologue :as pro]
+            [com.yetanalytics.flint-jena.triple   :as t])
   (:import [org.apache.jena.graph Node Triple]
-           [org.apache.jena.sparql.core BasicPattern Quad QuadPattern TriplePath] 
+           [org.apache.jena.sparql.core BasicPattern Quad QuadPattern] 
            [org.apache.jena.sparql.syntax ElementPathBlock ElementTriplesBlock]
            [org.apache.jena.update Update UpdateRequest]
            [org.apache.jena.sparql.modify.request
@@ -122,77 +123,46 @@
 ;; Graph Update
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn- triple-element->bgp ^BasicPattern [^ElementPathBlock triple-element]
-  (let [triples (->> triple-element
-                     .patternElts
-                     iterator-seq
-                     (mapv #(.asTriple ^TriplePath %)))]
-    (BasicPattern/wrap triples)))
+(defmethod ast/ast-node->jena :triple/quad-triples
+  [_opts [_ triple-elements]]
+  (t/triple-elements->basic-pattern triple-elements))
 
-(defn- triple-elements->bgp ^BasicPattern [triple-elements]
-  (let [triple-bgp (BasicPattern.)
-        sub-bgps   (map triple-element->bgp triple-elements)]
-    (run! (fn [sub-bgp] (.addAll triple-bgp sub-bgp)) sub-bgps)
-    triple-bgp))
+(defmethod ast/ast-node->jena :triple/quads
+  [_opts [_ [graph-node triple-bgp]]]
+  (t/basic-pattern->quad-pattern triple-bgp graph-node))
 
-(defn- triples->quads
-  (^QuadPattern [triples]
-   (triples->quads triples Quad/tripleInQuad))
-  (^QuadPattern [^BasicPattern triples graph-node]
-   (let [quads   (->> triples
-                      .iterator
-                      iterator-seq
-                      (map (fn [triple] (Quad. graph-node triple))))
-         pattern (QuadPattern.)]
-     (dorun (map-indexed (fn [idx quad] (.add pattern idx quad))
-                         quads))
-     pattern)))
+;; Construct quad accumulators (i.e. QuadBlocks -> QuadAcc)
+;; These are defined in this namespace since QuadAcc/QuadDataAcc are found
+;; in the sparql.modify.request package, i.e. they're specific to updates.
 
 (defprotocol QuadBlock
   (-add-quads! [this quad-acc]))
 
 (extend-protocol QuadBlock
-  ElementPathBlock
+  ElementPathBlock ; ast-node->jena :triple/vec or :triple/nform
   (-add-quads! [paths-element ^QuadAcc quad-acc]
     (dorun (->> paths-element
-                .patternElts
-                iterator-seq
-                (map (fn [^TriplePath triple-path]
-                       (.asTriple triple-path)))
-                (map (fn [^Triple triple]
-                       (.addTriple quad-acc triple))))))
+                t/triple-element->seq
+                (map t/triple-path->triple)
+                (map (fn [^Triple triple] (.addTriple quad-acc triple))))))
 
-  ElementTriplesBlock
+  ElementTriplesBlock ; Unused, but demonstrates parallel with ElementPathBlock
   (-add-quads! [triples-element ^QuadAcc quad-acc]
     (dorun (->> triples-element
-                .patternElts
-                iterator-seq
-                (map (fn [^Triple triple]
-                       (.addTriple quad-acc triple))))))
+                t/triple-element->seq*
+                (map (fn [^Triple triple] (.addTriple quad-acc triple))))))
 
-  BasicPattern
+  BasicPattern ; Unused, but demonstrates parallel with QuadPattern
   (-add-quads! [triples ^QuadAcc quad-acc]
     (dorun (->> triples
-                .iterator
-                iterator-seq
-                (map (fn [^Triple triple]
-                       (.addTriple quad-acc triple))))))
+                t/basic-pattern->seq
+                (map (fn [^Triple triple] (.addTriple quad-acc triple))))))
 
-  QuadPattern
+  QuadPattern ; ast-node->jena :triple/quads
   (-add-quads! [quads ^QuadAcc quad-acc]
     (dorun (->> quads
-                .iterator
-                iterator-seq
-                (map (fn [^Quad quad]
-                       (.addQuad quad-acc quad)))))))
-
-(defmethod ast/ast-node->jena :triple/quad-triples
-  [_opts [_ triple-elements]]
-  (triple-elements->bgp triple-elements))
-
-(defmethod ast/ast-node->jena :triple/quads
-  [_opts [_ [graph-node triple-bgp]]]
-  (triples->quads triple-bgp graph-node))
+                t/quad-pattern->seq
+                (map (fn [^Quad quad] (.addQuad quad-acc quad)))))))
 
 (defn- add-quad-elements! [quad-acc quad-elements]
   (run! (fn [quad-element] (-add-quads! quad-element quad-acc))

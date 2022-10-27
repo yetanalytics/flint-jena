@@ -4,16 +4,13 @@
             [com.yetanalytics.flint-jena.modifier :as mod]
             [com.yetanalytics.flint-jena.prologue :as pro]
             [com.yetanalytics.flint-jena.select   :as sel]
+            [com.yetanalytics.flint-jena.triple   :as t]
             [com.yetanalytics.flint-jena.values   :as values]
             [com.yetanalytics.flint-jena.where    :as where])
-  (:import [org.apache.jena.sparql.core BasicPattern TriplePath]
-           [org.apache.jena.graph Node]
+  (:import [org.apache.jena.graph Node]
            [org.apache.jena.query Query]
-           [org.apache.jena.sparql.syntax
-            ElementGroup
-            ElementPathBlock
-            Template
-            TripleCollectorBGP]))
+           [org.apache.jena.sparql.core BasicPattern]
+           [org.apache.jena.sparql.syntax Template]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Multimethods and Helpers
@@ -94,17 +91,6 @@
             ast))
         query-ast))
 
-(defn- elements->nopath-triples
-  "Convert the coll of ElementPathBlocks `triple-elements` into a BGP."
-  ^BasicPattern [triple-elements]
-  (let [acc (TripleCollectorBGP.)]
-    (dorun (for [t-elem triple-elements
-                 triple (->> (.patternElts ^ElementPathBlock t-elem)
-                             iterator-seq
-                             (map #(.asTriple ^TriplePath %)))]
-             (.addTriple acc triple)))
-    (.getBGP acc)))
-
 (defn- replace-construct-where
   "Replaces the `:construct` and `:where` AST nodes with a single
    `:construct-where` node."
@@ -117,13 +103,20 @@
                  :else            [k v])))
        (filter some?)))
 
+;; Templates are specific to CONSTRUCT so we put this function here and not
+;; in the triple namespace.
+(defn- triple-elements->template
+  "Convert a ElementPathBlock element into a Template."
+  [triple-elements]
+  (->> triple-elements
+       ^BasicPattern t/triple-elements->basic-pattern
+       Template.))
+
 ;; Multimethods
 
 (defmethod ast/ast-node->jena :construct
   [_ [kw triple-elements]]
-  [kw (->> triple-elements 
-           elements->nopath-triples
-           Template.)])
+  [kw (triple-elements->template triple-elements)])
 
 ;; Same as for `:where`
 (defmethod ast/ast-node->jena :construct-where [_ where] where)
@@ -201,9 +194,9 @@
    if said pattern is not a BGP. Called in conjunction with the regular
    `add-where!`"
   [^Query query where-ast]
-  (try (->> (.getElements ^ElementGroup where-ast)
-            elements->nopath-triples
-            Template.
+  (try (->> where-ast
+            where/get-sub-elements
+            triple-elements->template
             (.setConstructTemplate query))
        (catch Exception _
          (throw-construct-where where-ast))))
