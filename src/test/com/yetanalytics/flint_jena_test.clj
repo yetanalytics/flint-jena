@@ -53,22 +53,3 @@
 
 (deftest update-tests
   (make-update-tests "dev-resources/test-fixtures/update"))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Benchmarking
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(comment
-  (require '[criterium.core :as crit])
-
-  (def select-query-fix-1
-    '{:prefixes {:foo "<http://foo.org/>"}
-      :select   :*
-      :from     [:foo/graph]
-      :where    [[?x :foo/pred ?z]]})
-
-  (crit/quick-bench
-   (format-query select-query-fix-1))
-  (crit/quick-bench
-   (create-query select-query-fix-1))
-  )
