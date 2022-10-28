@@ -52,13 +52,20 @@
 (def ^:dynamic *scale-factor* 1e6)
 (def ^:dynamic *scale-unit* "µs")
 
-;; Formula from: 
+;; Standard error of sample mean:
+;; s / (sqrt n) = (sqrt (var / n))
+;; https://en.wikipedia.org/wiki/Standard_error#Estimate
+
+;; Standard error of difference between two sample means:
+;; s_pooled * (sqrt (2 / n))
+;; = (sqrt ((var_1 + var_2) / 2)) * (sqrt (2 / n))
+;; = (sqrt (((var_1 + var_2) / 2) * (2 / n)))
+;; = (sqrt ((var_1 + var_2) / n))
 ;; https://en.wikipedia.org/wiki/Student%27s_t-test#Equal_sample_sizes_and_variances
 
-;; Note that deg-freedom = 2 * (sample-n - 1)
-;; Threshold for deg-freedom = 10, 95% confidence = 2.228
-
-(def sqrt-2 (math/sqrt 2.0))
+;; We can then use these values to calculate t values to test significance.
+;; However we can skip this since the bench results generally result in
+;; absurdly high t values.
 
 (defn- result-map
   [file-name test-type res-1 res-2]
@@ -80,14 +87,12 @@
         mean-p   (* 100 (/ mean-d mean-1))
         se-1     (math/sqrt (/ var-1 samp-n))
         se-2     (math/sqrt (/ var-2 samp-n))
-        se-d     (/ (math/hypot var-1 var-2) samp-n)
-        t-val    (abs (/ mean-d se-d))]
+        se-d     (math/sqrt (/ (+ var-1 var-2) samp-n))]
     {:file       file-name
      format-k    (format "%.2f ± %.2f" mean-1 se-1)
      create-k    (format "%.2f ± %.2f" mean-2 se-2)
      :difference (format "%.2f ± %.2f" mean-d se-d)
-     :percent    (format "%.2f%s" mean-p "%")
-     :t-value    (format "%.2f" t-val)}))
+     :percent    (format "%.2f%s" mean-p "%")}))
 
 (defn- print-table
   [test-type res-map]
@@ -95,8 +100,7 @@
                    (keyword (format "format-%s" (name test-type)))
                    (keyword (format "create-%s" (name test-type)))
                    :difference
-                   :percent
-                   :t-value]
+                   :percent]
                   res-map))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

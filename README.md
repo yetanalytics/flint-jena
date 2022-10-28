@@ -57,8 +57,8 @@ Which then outputs the following to `target/bench/query.txt`:
 ```
 ************************ Queries creation bench results (in µs) ************************
 
-|        :file | :format-query | :create-query |  :difference | :percent |    :t-value |
-|--------------+---------------+---------------+--------------+----------+-------------|
-| select-1.edn |  61.69 ± 0.00 |  25.38 ± 0.00 | 36.30 ± 0.00 |   58.85% | 10879107.17 |
-| select-2.edn |  91.55 ± 0.00 |  37.61 ± 0.00 | 53.93 ± 0.00 |   58.91% |  9072047.39 |
+|        :file | :format-query | :create-query |  :difference | :percent |
+|--------------+---------------+---------------+--------------+----------|
+| select-1.edn |  61.69 ± 0.00 |  25.38 ± 0.00 | 36.30 ± 0.00 |   58.85% |
+| select-2.edn |  91.55 ± 0.00 |  37.61 ± 0.00 | 53.93 ± 0.00 |   58.91% |
 ```
