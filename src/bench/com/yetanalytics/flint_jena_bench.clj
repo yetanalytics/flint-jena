@@ -182,7 +182,7 @@
         updates (read-files (:update-inputs opts*))
         title   update-bench-title
         results (execute-benches updates :updates format-updates create-updates)
-        pptab   (partial print-table :query)
+        pptab   (partial print-table :updates)
         fpath   (:update-output opts*)]
     (make-output-file! fpath)
     (spit fpath title)
