@@ -12,6 +12,10 @@
            [org.apache.jena.query QueryFactory]
            [org.apache.jena.update UpdateFactory]))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Vanilla Flint -> Jena
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defn- format-query
   [query]
   (QueryFactory/create ^String (flint/format-query query)))
@@ -19,6 +23,10 @@
 (defn- format-updates
   [updates]
   (UpdateFactory/create ^String (flint/format-updates updates)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Read input files
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn- read-files*
   [file-path]
@@ -32,12 +40,24 @@
 
 (defn- read-files
   [file-paths]
-  (cond
-    (< 1 (count file-paths)) []
-    (= 1 (count file-paths)) (read-files* (first file-paths))
-    :else (reduce (fn [acc file-path] (into acc (read-files* file-path)))
-                  []
-                  file-paths)))
+  (reduce (fn [acc file-path] (into acc (read-files* file-path)))
+          []
+          file-paths))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Init output files
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defn- make-output-file! [file-path]
+  (let [f (io/file file-path)
+        d (io/file (.getParent f))]
+    (when-let [_ (or (.mkdirs d)
+                     (.createNewFile f))]
+      (log/infof "Creating result file: %s" file-path))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Compute statistics and table
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 ;; Default is microseconds
 
@@ -91,21 +111,26 @@
                    :t-value]
                   res-map))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Execute benchmarks
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; We use quick-benchmark instead of crit/benchmark or else our benching would
+;; be super slow without that much gain in precision.
+
 (defn- execute-benches
   [input-maps test-type format-fn create-fn]
   (map (fn [{fname :name fedn :edn}]
-         (let [_  (log/infof "Benching: %s" fname)
+         (let [_  (log/infof "Start bench:  %s" fname)
                fr (crit/quick-benchmark (format-fn fedn) {})
-               cr (crit/quick-benchmark (create-fn fedn) {})]
+               cr (crit/quick-benchmark (create-fn fedn) {})
+               _  (log/infof "Finish bench: %s" fname)]
            (result-map fname test-type fr cr)))
        input-maps))
 
-(defn- make-output-file [file-path]
-  (let [f (io/file file-path)
-        d (io/file (.getParent f))]
-    (log/infof "Output results to: %s" file-path)
-    (.mkdirs d)
-    (.createNewFile f)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Output file header
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def padding-stars
   "************************")
@@ -122,33 +147,44 @@
           *scale-unit*
           padding-stars))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Output file header
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (def ^:dynamic *default-opts*
+  "The default opt args map."
   {:query-inputs   ["dev-resources/test-fixtures/query"]
-   :query-outputs  ["target/bench/query-bench.txt"]
+   :query-output   "target/bench/query.txt"
    :update-inputs  ["dev-resources/test-fixtures/update"]
-   :update-outputs ["target/bench/update-bench.txt"]})
+   :update-output  "target/bench/update.txt"})
 
 (defn bench-queries
+  "Bench `flint-jena/create-query` against the vanilla Flint querys formatter.
+   By default, reads from `dev-resources/test-fixtures/query` and outputs to
+   `target/bench/query.txt`."
   [opts]
   (let [opts*   (merge *default-opts* opts)
         queries (read-files (:query-inputs opts*))
         title   query-bench-title
         results (execute-benches queries :query format-query create-query)
         pptab   (partial print-table :query)
-        fpath   (:query-outputs opts*)] 
-    (make-output-file fpath)
+        fpath   (:query-output opts*)] 
+    (make-output-file! fpath)
     (spit fpath title)
     (spit fpath (with-out-str (pptab results)) :append true)))
 
 (defn bench-updates
+  "Bench `flint-jena/create-updates` against the vanilla Flint updates formatter.
+   By default, reads from `dev-resources/test-fixtures/update` and outputs to
+   `target/bench/update.txt`."
   [opts]
   (let [opts*   (merge *default-opts* opts)
         updates (read-files (:update-inputs opts*))
         title   update-bench-title
         results (execute-benches updates :updates format-updates create-updates)
         pptab   (partial print-table :query)
-        fpath   (:update-outputs opts*)]
-    (make-output-file fpath)
+        fpath   (:update-output opts*)]
+    (make-output-file! fpath)
     (spit fpath title)
     (spit fpath (with-out-str (pptab results)) :append true)))
 
