@@ -3,6 +3,7 @@
             [clojure.spec.alpha :as s]
             [com.yetanalytics.flint-jena]
             [com.yetanalytics.flint-jena.ast    :as ast]
+            [com.yetanalytics.flint-jena.axiom  :as ax]
             [com.yetanalytics.flint.spec.update :as us])
   (:import [org.apache.jena.graph Node NodeFactory]
            [org.apache.jena.sparql.core Prologue Quad]
@@ -145,7 +146,10 @@
            (-> (->> data-fixture
                     (s/conform ::us/insert-data)
                     (conj [:insert-data])
-                    (ast/ast->jena {:prologue prefix-prologue}))
+                    (ast/ast->jena {:prologue prefix-prologue
+                                    :blank-node-map   (ax/blank-node-map)
+                                    :blank-var-map    (ax/blank-var-map)
+                                    :active-bnode-map (atom :blank-var-map)}))
                (update 1 #(.getQuads ^QuadDataAcc %))))))
   (testing "DELETE DATA"
     (is (= [:delete-data quads-fixture]
@@ -172,7 +176,10 @@
            (->> data-fixture
                 (s/conform ::us/insert)
                 (conj [:insert])
-                (ast/ast->jena {:prologue prefix-prologue})))))
+                (ast/ast->jena {:prologue         prefix-prologue
+                                :blank-node-map   (ax/blank-node-map)
+                                :blank-var-map    (ax/blank-var-map)
+                                :active-bnode-map (atom :blank-var-map)})))))
   (testing "USING"
     (is (= [:using foo-bar-node]
            (->> :foo/bar

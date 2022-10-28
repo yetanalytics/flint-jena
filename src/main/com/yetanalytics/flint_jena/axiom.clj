@@ -17,12 +17,15 @@
 
 ;; The need for all these blank node utilities is that under the hood, blank
 ;; nodes in Jena queries are represented by Var objects, not blank Node objects.
-;; The exception is in CONSTRUCT templates, hence utilities to convert Vars into
-;; blank Nodes.
+;; The exceptions are CONSTRUCT and INSERT (DATA) triples, hence utilities to
+;; set which blank node map to use.
 
 ;; In addition, we need these node maps to ensure that a) our compiled queries
 ;; match those created by Jena parsers, and b) ensure that equality and hash ops
 ;; can work properly on queries.
+
+;; FIXME: Deal with blank node label reuse, which is not allowed in
+;; SPARQL nor Jena
 
 (defn blank-node-map []
   (LabelToNodeMap/createBNodeMap))

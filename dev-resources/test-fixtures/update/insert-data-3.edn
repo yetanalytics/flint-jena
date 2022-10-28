@@ -1,0 +1,8 @@
+;; INSERT DATA with blank node
+[{:prefixes    {:rdf "<http://www.w3.org/1999/02/22-rdf-syntax-ns#>"}
+  :insert-data [[:graph "<http://example/bookStore>"
+                 [["<http://example/my-list/>" :rdf/rest _b1]
+                  [_b1 :rdf/first 1]
+                  [_b1 :rdf/rest _b2]
+                  [_b2 :rdf/first 2]
+                  [_b2 :rdf/rest :rdf/nil]]]]}]

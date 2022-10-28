@@ -45,10 +45,16 @@
          (throw (ex-info err-msg err-map)))
        ast))))
 
-(def conform-query
+(def ^{:arglists '([spec-ed? query])} conform-query
+  "Conform `query from` Flint concrete syntax into an AST. If `spec-ed?`
+   is `true` print the full Clojure spec error data on failure, else print
+   a summary."
   (partial conform-sparql ::invalid-query qs/query-spec))
 
-(def conform-update
+(def ^{:arglists '([spec-ed? update])} conform-update
+  "Conform `update` from Flint concrete syntax into an AST. If `spec-ed?`
+   is `true` print the full Clojure spec error data on failure, else print
+   a summary."
   (partial conform-sparql ::invalid-update us/update-spec))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
