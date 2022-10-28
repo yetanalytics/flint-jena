@@ -20,15 +20,24 @@
   [updates]
   (UpdateFactory/create ^String (flint/format-updates updates)))
 
-(defn- read-files
-  [directory]
-  (->> directory
+(defn- read-files*
+  [file-path]
+  (->> file-path
        io/file
        file-seq
        (filter #(.isFile ^File %))
        (mapv (fn [f]
                {:name (.getName ^File f)
                 :edn  (edn/read-string (slurp f))}))))
+
+(defn- read-files
+  [file-paths]
+  (cond
+    (< 1 (count file-paths)) []
+    (= 1 (count file-paths)) (read-files* (first file-paths))
+    :else (reduce (fn [acc file-path] (into acc (read-files* file-path)))
+                  []
+                  file-paths)))
 
 ;; Default is microseconds
 
@@ -82,44 +91,71 @@
                    :t-value]
                   res-map))
 
-(defn- bench-files
-  [test-dir test-type format-fn create-fn]
+(defn- execute-benches
+  [input-maps test-type format-fn create-fn]
   (map (fn [{fname :name fedn :edn}]
          (let [_  (log/infof "Benching: %s" fname)
                fr (crit/quick-benchmark (format-fn fedn) {})
                cr (crit/quick-benchmark (create-fn fedn) {})]
            (result-map fname test-type fr cr)))
-       (read-files test-dir)))
+       input-maps))
 
-(defn- make-file [file-path]
+(defn- make-output-file [file-path]
   (let [f (io/file file-path)
         d (io/file (.getParent f))]
     (log/infof "Output results to: %s" file-path)
     (.mkdirs d)
     (.createNewFile f)))
 
-(defn bench-query []
-  (let [title (format "**** Query creation bench results (in %s) ****\n"
-                      *scale-unit*)
-        res   (bench-files "dev-resources/test-fixtures/test"
-                           :query
-                           format-query
-                           create-query)
-        pptab (partial print-table :query)
-        fpath "target/bench/query-bench.txt"] 
-    (make-file fpath)
-    (spit fpath title)
-    (spit fpath (with-out-str (pptab res)) :append true)))
+(def padding-stars
+  "************************")
 
-(defn bench-update []
-  (let [title (format "**** Update creation bench results (in %s) ****\n"
-                      *scale-unit*)
-        res   (bench-files "dev-resources/test-fixtures/update"
-                           :updates
-                           format-updates
-                           create-updates)
-        pptab (partial print-table :query)
-        fpath "target/bench/update-bench.txt"]
-    (make-file fpath)
+(def query-bench-title
+  (format "%s Queries creation bench results (in %s) %s\n"
+          padding-stars
+          *scale-unit*
+          padding-stars))
+
+(def update-bench-title
+  (format "%s Updates creation bench results (in %s) %s\n"
+          padding-stars
+          *scale-unit*
+          padding-stars))
+
+(def ^:dynamic *default-opts*
+  {:query-inputs   "dev-resources/test-fixtures/query"
+   :query-outputs  "target/bench/query-bench.txt"
+   :update-inputs  "dev-resources/test-fixtures/update"
+   :update-outputs "target/bench/update-bench.txt"})
+
+(defn bench-queries
+  [opts]
+  (let [opts*   (merge *default-opts* opts)
+        queries (read-files (:query-inputs opts*))
+        title   query-bench-title
+        results (execute-benches queries :query format-query create-query)
+        pptab   (partial print-table :query)
+        fpath   (:query-outputs opts*)] 
+    (make-output-file fpath)
     (spit fpath title)
-    (spit fpath (with-out-str (pptab res)) :append true)))
+    (spit fpath (with-out-str (pptab results)) :append true)))
+
+(defn bench-updates
+  [opts]
+  (let [opts*   (merge *default-opts* opts)
+        updates (read-files (:update-inputs opts*))
+        title   update-bench-title
+        results (execute-benches updates
+                                 :updates
+                                 format-updates
+                                 create-updates)
+        pptab   (partial print-table :query)
+        fpath   (:update-outputs opts*)]
+    (make-output-file fpath)
+    (spit fpath title)
+    (spit fpath (with-out-str (pptab results)) :append true)))
+
+(defn bench
+  [opts]
+  (bench-queries opts)
+  (bench-updates opts))
