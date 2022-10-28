@@ -6,6 +6,8 @@
 
 A companion library to [Flint](https://github.com/yetanalytics/flint) for the direct compilation of Flint data into [Apache Jena](https://jena.apache.org/)-based SPARQL queries and updates.
 
+Uses Flint version [v0.2.1](https://github.com/yetanalytics/flint/releases/tag/v0.2.1).
+
 ## Installation
 
 ```clojure
