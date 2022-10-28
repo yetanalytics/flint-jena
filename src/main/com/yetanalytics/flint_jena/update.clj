@@ -4,7 +4,6 @@
             [com.yetanalytics.flint-jena.triple   :as t])
   (:import [org.apache.jena.graph Node Triple]
            [org.apache.jena.sparql.core BasicPattern Quad QuadPattern]
-           [org.apache.jena.sparql.lang LabelToNodeMap]
            [org.apache.jena.sparql.syntax ElementPathBlock ElementTriplesBlock]
            [org.apache.jena.update Update UpdateRequest]
            [org.apache.jena.sparql.modify.request
@@ -172,14 +171,20 @@
 ;; Quad Patterns
 
 (defmethod ast/ast-node->jena-pre :insert-data
-  [{:keys [active-bnode-map blank-node-map]} _]
-  (reset! active-bnode-map :blank-node-map)
-  (.clear ^LabelToNodeMap blank-node-map))
+  [{:keys [active-bnode-map]} _]
+  (reset! active-bnode-map :blank-node-map))
 
 (defmethod ast/ast-node->jena-post :insert-data
-  [{:keys [active-bnode-map blank-node-map]} _]
-  (reset! active-bnode-map :blank-var-maps)
-  (.clear ^LabelToNodeMap blank-node-map))
+  [{:keys [active-bnode-map]} _]
+  (reset! active-bnode-map :blank-var-map))
+
+(defmethod ast/ast-node->jena-pre :insert
+  [{:keys [active-bnode-map]} _]
+  (reset! active-bnode-map :blank-node-map))
+
+(defmethod ast/ast-node->jena-post :insert
+  [{:keys [active-bnode-map]} _]
+  (reset! active-bnode-map :blank-var-map))
 
 (defmethod ast/ast-node->jena :insert-data [_opts [kw elements]]
   [kw (doto (QuadDataAcc.)
