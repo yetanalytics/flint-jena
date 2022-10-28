@@ -3,6 +3,7 @@
             [clojure.java.io               :as io]
             [clojure.math                  :as math]
             [clojure.pprint                :as pp]
+            [clojure.tools.logging         :as log]
             [criterium.core                :as crit]
             [com.yetanalytics.flint        :as flint]
             [com.yetanalytics.flint-jena   :refer [create-query
@@ -85,7 +86,8 @@
   [test-dir test-type format-fn create-fn]
   ;; Perform benching in parallel or else it would take forever
   (pmap (fn [{fname :name fedn :edn}]
-          (let [fr (crit/quick-benchmark (format-fn fedn) {})
+          (let [_  (log/infof "Benching: %s" fname)
+                fr (crit/quick-benchmark (format-fn fedn) {})
                 cr (crit/quick-benchmark (create-fn fedn) {})]
             (result-map fname test-type fr cr)))
         (read-files test-dir)))
@@ -93,13 +95,14 @@
 (defn- make-file [file-path]
   (let [f (io/file file-path)
         d (io/file (.getParent f))]
+    (log/infof "Output results to: %s" file-path)
     (.mkdirs d)
     (.createNewFile f)))
 
 (defn bench-query []
   (let [title (format "**** Query creation bench results (in %s) ****\n"
                       *scale-unit*)
-        res   (bench-files "dev-resources/test-fixtures/query"
+        res   (bench-files "dev-resources/test-fixtures/test"
                            :query
                            format-query
                            create-query)
