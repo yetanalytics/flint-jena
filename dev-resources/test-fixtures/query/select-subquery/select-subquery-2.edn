@@ -1,0 +1,6 @@
+;; SELECT with sub-SELECT query at top level
+{:prefixes {:$ "<http://people.example/>"}
+ :select   [?y ?minName]
+ :where    {:select   [?y [(min ?name) ?minName]]
+            :where    [[?y :name ?name]]
+            :group-by [?y]}}

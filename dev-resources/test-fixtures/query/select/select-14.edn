@@ -1,0 +1,3 @@
+;; SELECT with multiple layers of WHERE nesting
+{:select [?v]
+ :where  [[:where [[:where [[?v ?p "xyz"]]]]]]}

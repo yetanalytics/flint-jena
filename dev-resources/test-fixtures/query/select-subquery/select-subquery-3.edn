@@ -1,0 +1,12 @@
+;; SELECT with multiple sub-SELECTs on multiple levels
+{:prefixes {:$ "<http://people.example/>"},
+ :select [?avgMinName ?sampleMinName],
+ :where
+ [[:where {:select [[(avg ?minName) ?avgMinName]],
+           :where {:select [[(min ?name) ?minName]],
+                   :where [[?y :name ?name]],
+                   :group-by [?y]}}]
+  [:where {:select [[(sample ?minName) ?sampleMinName]],
+           :where {:select [[(min ?name) ?minName]],
+                   :where [[?z :name ?name]],
+                   :group-by [?z]}}]]}

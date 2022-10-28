@@ -1,0 +1,7 @@
+;; DELETE INSERT featuring a subquery
+[{:prefixes {:foo "<http://foo.org/>"}
+  :delete   [[:foo/subj ?pred ?obj]]
+  :insert   [[:foo/subj :foo/pred :foo/obj]]
+  :where    [[:foo/subj ?pred ?obj]
+             [:where {:select [?obj]
+                      :where  [[_ :foo/special-pred ?obj]]}]]}]

@@ -1,0 +1,6 @@
+;; SELECT with blank nodes
+{:prefixes {:foo "<http://foo.org/>"}
+ :select   [?x ?y]
+ :where    [[?x :foo/bar _]
+            [_a :foo/baz ?y]
+            [?x :foo/qux ?y]]}
