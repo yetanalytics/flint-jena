@@ -41,7 +41,7 @@
 ;; Note that deg-freedom = 2 * (sample-n - 1)
 ;; Threshold for deg-freedom = 10, 95% confidence = 2.228
 
-(def sqrt-2 (Math/sqrt 2))
+(def sqrt-2 (math/sqrt 2.0))
 
 (defn- result-map
   [file-name test-type res-1 res-2]
@@ -84,13 +84,12 @@
 
 (defn- bench-files
   [test-dir test-type format-fn create-fn]
-  ;; Perform benching in parallel or else it would take forever
-  (pmap (fn [{fname :name fedn :edn}]
-          (let [_  (log/infof "Benching: %s" fname)
-                fr (crit/quick-benchmark (format-fn fedn) {})
-                cr (crit/quick-benchmark (create-fn fedn) {})]
-            (result-map fname test-type fr cr)))
-        (read-files test-dir)))
+  (map (fn [{fname :name fedn :edn}]
+         (let [_  (log/infof "Benching: %s" fname)
+               fr (crit/quick-benchmark (format-fn fedn) {})
+               cr (crit/quick-benchmark (create-fn fedn) {})]
+           (result-map fname test-type fr cr)))
+       (read-files test-dir)))
 
 (defn- make-file [file-path]
   (let [f (io/file file-path)
