@@ -44,17 +44,6 @@
           file-paths))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Init output files
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defn- make-output-file! [file-path]
-  (let [f (io/file file-path)
-        d (io/file (.getParent f))]
-    (when-let [_ (or (.mkdirs d)
-                     (.createNewFile f))]
-      (log/infof "Creating result file: %s" file-path))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Compute statistics and table
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -146,6 +135,19 @@
           *scale-unit*
           padding-stars))
 
+(defn- make-output-file! [file-path]
+  (let [f (io/file file-path)
+        d (io/file (.getParent f))]
+    (when (or (.mkdirs d)
+              (.createNewFile f))
+      (log/infof "Output file %s not found; creating file." file-path))))
+
+(defn- write-to-output-file! [file-path title results pp-table]
+  (log/infof "Writing results to output file: %s" file-path)
+  (make-output-file! file-path)
+  (spit file-path title)
+  (spit file-path (with-out-str (pp-table results)) :append true))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Putting it all together
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -167,10 +169,8 @@
         title   query-bench-title
         results (execute-benches queries :query format-query create-query)
         pptab   (partial print-table :query)
-        fpath   (:query-output opts*)] 
-    (make-output-file! fpath)
-    (spit fpath title)
-    (spit fpath (with-out-str (pptab results)) :append true)))
+        fpath   (:query-output opts*)]
+    (write-to-output-file! fpath title results pptab)))
 
 (defn bench-updates
   "Bench `flint-jena/create-updates` against the vanilla Flint updates formatter.
@@ -183,9 +183,7 @@
         results (execute-benches updates :updates format-updates create-updates)
         pptab   (partial print-table :updates)
         fpath   (:update-output opts*)]
-    (make-output-file! fpath)
-    (spit fpath title)
-    (spit fpath (with-out-str (pptab results)) :append true)))
+    (write-to-output-file! fpath title results pptab)))
 
 (defn bench
   "Bench both `create-query` and `create-updates` against using vanilla Flint
