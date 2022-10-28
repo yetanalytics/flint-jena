@@ -1,17 +1,28 @@
 {:paths ["src/main"]
  :deps {org.clojure/clojure       {:mvn/version "1.11.1"}
-        org.apache.jena/jena-core {:mvn/version "4.6.1"}
-        org.apache.jena/jena-arq  {:mvn/version "4.6.1"}
+        org.apache.jena/jena-core {:mvn/version "4.6.1"
+                                   :exclusions  [org.slf4j/slf4j-api]}
+        org.apache.jena/jena-arq  {:mvn/version "4.6.1"
+                                   :exclusions  [org.slf4j/slf4j-api]}
+        org.slf4j/slf4j-api       {:mvn/version "1.7.36"}
         com.yetanalytics/flint    {:mvn/version "0.2.1"
-                                   :exclusions [org.clojure/clojure
-                                                org.clojure/clojurescript]}}
+                                   :exclusions  [org.clojure/clojure
+                                                 org.clojure/clojurescript]}}
  :aliases
- {:test {:extra-paths ["src/test"]
-         :extra-deps {io.github.cognitect-labs/test-runner {:git/tag "v0.5.1"
-                                                            :git/sha "dfb30dd"}
-                      cloverage/cloverage {:mvn/version "1.2.2"}
-                      ;; For dev
-                      criterium/criterium {:mvn/version "0.4.6"}}}
+ {:bench {:extra-paths ["src/bench" "dev-resources"]
+          :extra-deps  {criterium/criterium
+                        {:mvn/version "0.4.6"}
+                        org.clojure/tools.logging
+                        {:mvn/version "1.2.4"}
+                        ch.qos.logback/logback-classic
+                        {:mvn/version "1.2.10"
+                         :exclusions  [org.slf4j/slf4j-api]}}}
+  :test {:extra-paths ["src/test"]
+         :extra-deps  {io.github.cognitect-labs/test-runner
+                       {:git/tag "v0.5.1"
+                        :git/sha "dfb30dd"}
+                       cloverage/cloverage
+                       {:mvn/version "1.2.2"}}}
   :run {:exec-fn   cognitect.test-runner.api/test
         :exec-args {:dirs ["src/test"]}}
   :cov {:exec-fn   cloverage.coverage/run-project
