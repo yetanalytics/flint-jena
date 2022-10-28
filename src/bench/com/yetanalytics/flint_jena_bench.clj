@@ -1,13 +1,12 @@
 (ns com.yetanalytics.flint-jena-bench
-  (:require [clojure.edn                   :as edn]
-            [clojure.java.io               :as io]
-            [clojure.math                  :as math]
-            [clojure.pprint                :as pp]
-            [clojure.tools.logging         :as log]
-            [criterium.core                :as crit]
-            [com.yetanalytics.flint        :as flint]
-            [com.yetanalytics.flint-jena   :refer [create-query
-                                                   create-updates]])
+  (:require [clojure.edn                 :as edn]
+            [clojure.java.io             :as io]
+            [clojure.math                :as math]
+            [clojure.pprint              :as pp]
+            [clojure.tools.logging       :as log]
+            [criterium.core              :as crit]
+            [com.yetanalytics.flint      :as flint]
+            [com.yetanalytics.flint-jena :refer [create-query create-updates]])
   (:import [java.io File]
            [org.apache.jena.query QueryFactory]
            [org.apache.jena.update UpdateFactory]))
@@ -115,8 +114,8 @@
 ;; Execute benchmarks
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; We use quick-benchmark instead of crit/benchmark or else our benching would
-;; be super slow without that much gain in precision.
+;; We use crit/quick-benchmark instead of crit/benchmark or else our
+;; benching would be super slow without that much gain in precision.
 
 (defn- execute-benches
   [input-maps test-type format-fn create-fn]
@@ -132,7 +131,7 @@
 ;; Output file header
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def padding-stars
+(def ^:private padding-stars
   "************************")
 
 (def query-bench-title
@@ -148,7 +147,7 @@
           padding-stars))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Output file header
+;; Putting it all together
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (def ^:dynamic *default-opts*
