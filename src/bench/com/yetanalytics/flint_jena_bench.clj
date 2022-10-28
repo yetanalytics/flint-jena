@@ -123,10 +123,10 @@
           padding-stars))
 
 (def ^:dynamic *default-opts*
-  {:query-inputs   "dev-resources/test-fixtures/query"
-   :query-outputs  "target/bench/query-bench.txt"
-   :update-inputs  "dev-resources/test-fixtures/update"
-   :update-outputs "target/bench/update-bench.txt"})
+  {:query-inputs   ["dev-resources/test-fixtures/query"]
+   :query-outputs  ["target/bench/query-bench.txt"]
+   :update-inputs  ["dev-resources/test-fixtures/update"]
+   :update-outputs ["target/bench/update-bench.txt"]})
 
 (defn bench-queries
   [opts]
@@ -145,10 +145,7 @@
   (let [opts*   (merge *default-opts* opts)
         updates (read-files (:update-inputs opts*))
         title   update-bench-title
-        results (execute-benches updates
-                                 :updates
-                                 format-updates
-                                 create-updates)
+        results (execute-benches updates :updates format-updates create-updates)
         pptab   (partial print-table :query)
         fpath   (:update-outputs opts*)]
     (make-output-file fpath)
