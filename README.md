@@ -29,3 +29,36 @@ Both API functions have the following keyword arguments:
 - `aggregate-fns`: A set of function IRI strings (_not_ wrapped, so `\"http://fn.com\"` is a valid entry) to be treated as custom [aggregate expressions](https://jena.apache.org/documentation/query/group-by.html), as opposed to run-of-the-mill non-aggregate expressions.
 
 \* There is also an `axiom/xsd-datatype-map*` map; the main difference is that there is a more one-to-one mapping of numeric datatype IRIs to classes, whereas `axiom/xsd-datatype-map` coerces them to either `xsd:integer` or `xsd:decimal`.
+
+## Benchmarking (dev only)
+
+The flint-jena repo comes with benchmarking utilities to bench `create-query` and `create-updates` against the vanilla Flint API functions, specifically the `format-*` functions followed by Jena SPARQL parsing. To bench, clone this repo, then execute the following function:
+```clojure
+com.yetanalytics.flint-jena-bench/bench
+```
+The `bench` function accepts the following arguments:
+- `:query-inputs`: A vector of file paths from which to read query EDN. Default: `["dev-resources/test-fixtures/query"]`.
+- `:update-inputs`: A vector of file paths from which to read update EDN. Default: `["dev-resources/test-fixtures/query"]`. 
+- `:query-output`: A file path string where to write the query bench output. Default: `"target/bench/query.txt"`
+- `:update-output`: A file path string where to write the update bench output. Default: `"target/bench/update.txt"`
+
+The namespace also contains `bench-queries` and `bench-updates` if one only wants to bench `create-query` and `create-updates`, respectively. There are also `bench`, `bench-queries`, and `bench-updates` Makefile targets for benching with default args.
+
+An example of use:
+```clojure
+clojure -X:bench
+  com.yetanalytics.flint-jena-bench/bench-queries 
+  :query-inputs '["dev-resources/test-fixtures/query/select/select-1.edn" 
+                  "dev-resources/test-fixtures/query/select/select-2.edn"]'
+```
+
+Which then outputs the following to `target/bench/query.txt`:
+
+```
+************************ Queries creation bench results (in µs) ************************
+
+|        :file | :format-query | :create-query |  :difference | :percent |    :t-value |
+|--------------+---------------+---------------+--------------+----------+-------------|
+| select-1.edn |  61.69 ± 0.00 |  25.38 ± 0.00 | 36.30 ± 0.00 |   58.85% | 10879107.17 |
+| select-2.edn |  91.55 ± 0.00 |  37.61 ± 0.00 | 53.93 ± 0.00 |   58.91% |  9072047.39 |
+```

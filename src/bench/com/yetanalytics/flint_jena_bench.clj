@@ -189,6 +189,21 @@
     (spit fpath (with-out-str (pptab results)) :append true)))
 
 (defn bench
+  "Bench both `create-query` and `create-updates` against using vanilla Flint
+   and Jena parsing. Accepts the following opt args:
+   
+   `:query-inputs`  - A vector of file paths from which to read query EDN.
+                      Default: `[\"dev-resources/test-fixtures/query\"]`.
+   
+   `:update-inputs` - A vector of file paths from which to read update EDN.
+                      Default: `[\"dev-resources/test-fixtures/query\"]`.
+   
+   `:query-output`  - A file path string where to write the query bench output.
+                      Default: `\"target/bench/query.txt\"`
+   
+   `:update-output` - A file path string where to write the update bench output.
+                      Default: `\"target/bench/update.txt\"`
+   "
   [opts]
   (bench-queries opts)
   (bench-updates opts))
