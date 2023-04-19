@@ -66,3 +66,12 @@ Which then outputs the following to `target/bench/query.txt`:
 | select-1.edn |  61.69 ± 0.00 |  25.38 ± 0.00 | 36.30 ± 0.00 |   58.85% |
 | select-2.edn |  91.55 ± 0.00 |  37.61 ± 0.00 | 53.93 ± 0.00 |   58.91% |
 ```
+
+## License
+
+Copyright © 2022-2023 Yet Analytics, Inc.
+
+Distributed under the Apache License version 2.0.
+
+The [Apache Jena logo](https://commons.wikimedia.org/wiki/File:Apache_Jena_logo.svg) is a trademark of the Apache Software Foundation.
+
