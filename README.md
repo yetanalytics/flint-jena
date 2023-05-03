@@ -11,7 +11,7 @@ Uses Flint version [v0.2.1](https://github.com/yetanalytics/flint/releases/tag/v
 ## Installation
 
 ```clojure
-{com.yetanalytics/flint-jena {:mvn/version "0.1.1"
+{com.yetanalytics/flint-jena {:mvn/version "0.1.2"
                               :exclusions [org.clojure/clojure]}}
 ```
 
