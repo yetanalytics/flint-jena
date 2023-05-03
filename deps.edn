@@ -1,8 +1,8 @@
 {:paths ["src/main"]
  :deps {org.clojure/clojure       {:mvn/version "1.11.1"}
-        org.apache.jena/jena-core {:mvn/version "4.6.1"
+        org.apache.jena/jena-core {:mvn/version "4.8.0"
                                    :exclusions  [org.slf4j/slf4j-api]}
-        org.apache.jena/jena-arq  {:mvn/version "4.6.1"
+        org.apache.jena/jena-arq  {:mvn/version "4.8.0"
                                    :exclusions  [org.slf4j/slf4j-api]}
         org.slf4j/slf4j-api       {:mvn/version "1.7.36"}
         com.yetanalytics/flint    {:mvn/version "0.2.1"
