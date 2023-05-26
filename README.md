@@ -73,5 +73,3 @@ Copyright © 2022-2023 Yet Analytics, Inc.
 
 Distributed under the Apache License version 2.0.
 
-The [Apache Jena logo](https://commons.wikimedia.org/wiki/File:Apache_Jena_logo.svg) is a trademark of the Apache Software Foundation.
-
