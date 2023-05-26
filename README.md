@@ -1,5 +1,7 @@
 # flint-jena
 
+<img src="logo/logo.svg" alt="Flint Jena Logo" width="250px" />
+
 [![CI](https://github.com/yetanalytics/flint-jena/actions/workflows/test.yml/badge.svg)](https://github.com/yetanalytics/flint-jena/actions/workflows/test.yml)
 [![Clojars Project](https://img.shields.io/clojars/v/com.yetanalytics/flint-jena.svg)](https://clojars.org/com.yetanalytics/flint)
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.1-5e0b73.svg)](CODE_OF_CONDUCT.md)
@@ -64,3 +66,10 @@ Which then outputs the following to `target/bench/query.txt`:
 | select-1.edn |  61.69 ± 0.00 |  25.38 ± 0.00 | 36.30 ± 0.00 |   58.85% |
 | select-2.edn |  91.55 ± 0.00 |  37.61 ± 0.00 | 53.93 ± 0.00 |   58.91% |
 ```
+
+## License
+
+Copyright © 2022-2023 Yet Analytics, Inc.
+
+Distributed under the Apache License version 2.0.
+
