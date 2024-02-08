@@ -17,13 +17,13 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defn- make-triple
-  ^Triple [svar pvar ovar]
+  ^Triple [^String svar ^String pvar ^String ovar]
   (Triple/create (NodeFactory/createVariable svar)
                  (NodeFactory/createVariable pvar)
                  (NodeFactory/createVariable ovar)))
 
 (defn- make-inv-path-triple
-  ^TriplePath [svar piri ovar]
+  ^TriplePath [^String svar ^String piri ^String ovar]
   (TriplePath. (NodeFactory/createVariable svar)
                (->> piri
                     NodeFactory/createURI
@@ -32,36 +32,35 @@
                (NodeFactory/createVariable ovar)))
 
 (defn- make-bnode-head-triple
-  ^Triple [bnode pvar ovar]
+  ^Triple [^String bnode ^String pvar ^String ovar]
   (Triple/create (NodeFactory/createBlankNode bnode)
                  (NodeFactory/createVariable pvar)
                  (NodeFactory/createVariable ovar)))
 
 (defn- make-bnode-pointer-triple
-  ^Triple [svar pvar bnode]
+  ^Triple [^String svar ^String pvar ^String bnode]
   (Triple/create (NodeFactory/createVariable svar)
                  (NodeFactory/createVariable pvar)
                  (NodeFactory/createBlankNode bnode)))
 
 (defn- make-rdf-first-triple*
-  ^Triple [bnode bnode-2]
+  ^Triple [^String bnode ^String bnode-2]
   (Triple/create (NodeFactory/createBlankNode bnode)
                  NodeConst/nodeFirst
                  (NodeFactory/createBlankNode bnode-2)))
 
 (defn- make-rdf-first-triple
-  ^Triple [bnode ovar]
+  ^Triple [^String bnode ^String ovar]
   (Triple/create (NodeFactory/createBlankNode bnode)
                  NodeConst/nodeFirst
                  (NodeFactory/createVariable ovar)))
 
 (defn- make-rdf-rest-triple
-  ^Triple
-  ([bnode]
+  (^Triple [^String bnode]
    (Triple/create (NodeFactory/createBlankNode bnode)
                   NodeConst/nodeRest
                   NodeConst/nodeNil))
-  ([bnode bnode-2]
+  (^Triple [^String bnode ^String bnode-2]
    (Triple/create (NodeFactory/createBlankNode bnode)
                   NodeConst/nodeRest
                   (NodeFactory/createBlankNode bnode-2))))
@@ -242,7 +241,7 @@
    :active-bnode-map (atom :blank-node-map)})
 
 (defn triples=
-  [expected actual]
+  [^ElementPathBlock expected actual]
   (.equalTo expected
             (->> actual (s/conform ts/triple-spec) (ast/ast->jena (opt-map)))
             (NodeIsomorphismMap.)))
