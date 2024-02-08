@@ -14,91 +14,6 @@
             TripleCollectorMark]))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; AST Methods
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; These multimethod dispatches (specifically `:triple/vec` and `triple/nform`)
-;; return ElementPathBlocks since that is the most general syntax Element that
-;; can be used in all clauses (WHERE, CONSTRUCT, DELETE, INSERT, etc).
-
-(defmethod ast/ast-node->jena :triple/path [_ [_ path]]
-  path)
-
-(defprotocol Predicate
-  (-create-triple
-    [pred subj obj])
-  (-add-triple!
-    [pred subj obj triples]
-    [pred subj obj triples idx]))
-
-(extend-protocol Predicate
-  Node
-  (-create-triple
-    [p s o]
-    (Triple. s p o))
-  (-add-triple!
-    ([p s o ^TripleCollector coll]
-     (.addTriple coll ^Triple (-create-triple p s o)))
-    ([p s o ^TripleCollectorMark coll idx]
-     (.addTriple coll idx ^Triple (-create-triple p s o))))
-
-  Path
-  (-create-triple
-   [p s o]
-   (TriplePath. s p o))
-  (-add-triple!
-   ([p s o ^TripleCollector coll]
-    (.addTriplePath coll ^TriplePath (-create-triple p s o)))
-   ([p s o ^TripleCollectorMark coll idx]
-    (.addTriplePath coll idx ^TriplePath (-create-triple p s o)))))
-
-#_(extend-protocol Object
-  Node
-  
-  ElementPathBlock)
-
-(defmethod ast/ast-node->jena :triple.vec/spo [_ [_ [s p o]]]
-  (let [triple-block (ElementPathBlock.)]
-    (-add-triple! p s o triple-block)
-    triple-block))
-
-;; FIXME
-(defmethod ast/ast-node->jena :triple.vec/s [_ [_ [_head block]]]
-  ;; subject is a RDF list or blank node vector, so it is already
-  ;; an TripleCollector/ElementPathBlock
-  block)
-
-(defmethod ast/ast-node->jena :triple.nform/spo [_ [_ spo-coll]]
-  (let [triple-block (ElementPathBlock.)]
-    (->> spo-coll
-         (mapcat
-          (fn [[s po-coll]] (map (fn [[p o]] [s p o]) po-coll)))
-         (map-indexed
-          (fn [idx [s p o]] (-add-triple! p s o triple-block idx)))
-         dorun)
-    #_(dorun (map-indexed
-            (fn [idx [s p o]] (-add-triple! p s o triple-block idx))
-            spo-coll))
-    triple-block))
-
-#_(defmethod ast/ast-node->jena :triple/spo [_ [_ spo]]
-  (mapcat (fn [[s po-coll]]
-            (map (fn [[p o]] [s p o]) po-coll))
-          spo))
-
-(defmethod ast/ast-node->jena :triple.nform/po [_ [_ po]]
-  (mapcat (fn [[p o-coll]]
-            (map (fn [o] [p o]) o-coll))
-          po))
-
-(defmethod ast/ast-node->jena :triple.nform/po-empty [_ [_ _]]
-  ;; FIXME
-  nil)
-
-(defmethod ast/ast-node->jena :triple.nform/o [_ [_ o]]
-  o)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Triple Conversion
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -169,8 +84,94 @@
     pattern))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Quads
+;; Protocols
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defprotocol Predicate
+  (-create-triple
+    [pred subj obj])
+  (-add-triple!
+    [pred subj obj triples]
+    [pred subj obj triples idx]))
+
+(extend-protocol Predicate
+  Node
+  (-create-triple
+    [p s o]
+    (Triple. s p o))
+  (-add-triple!
+    ([p s o ^TripleCollector coll]
+     (.addTriple coll ^Triple (-create-triple p s o)))
+    ([p s o ^TripleCollectorMark coll idx]
+     (.addTriple coll idx ^Triple (-create-triple p s o))))
+
+  Path
+  (-create-triple
+    [p s o]
+    (TriplePath. s p o))
+  (-add-triple!
+    ([p s o ^TripleCollector coll]
+     (.addTriplePath coll ^TriplePath (-create-triple p s o)))
+    ([p s o ^TripleCollectorMark coll idx]
+     (.addTriplePath coll idx ^TriplePath (-create-triple p s o)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; AST Methods
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; These multimethod dispatches (specifically `:triple/vec` and `triple/nform`)
+;; return ElementPathBlocks since that is the most general syntax Element that
+;; can be used in all clauses (WHERE, CONSTRUCT, DELETE, INSERT, etc).
+
+(defmethod ast/ast-node->jena :triple/path [_ [_ path]]
+  path)
+
+;; Vectors
+
+(defmethod ast/ast-node->jena :triple.vec/spo [_ [_ [s p o]]]
+  (let [triple-block (ElementPathBlock.)]
+    (-add-triple! p s o triple-block)
+    triple-block))
+
+;; FIXME
+(defmethod ast/ast-node->jena :triple.vec/s [_ [_ [_head block]]]
+  ;; subject is a RDF list or blank node vector, so it is already
+  ;; an TripleCollector/ElementPathBlock
+  block)
+
+;; Normal Forms
+
+(defmethod ast/ast-node->jena :triple.nform/spo [_ [_ spo-coll]]
+  (let [triple-block (ElementPathBlock.)]
+    (->> spo-coll
+         (mapcat
+          (fn [[s po-coll]] (map (fn [[p o]] [s p o]) po-coll)))
+         (map-indexed
+          (fn [idx [s p o]] (-add-triple! p s o triple-block idx)))
+         dorun)
+    #_(dorun (map-indexed
+            (fn [idx [s p o]] (-add-triple! p s o triple-block idx))
+            spo-coll))
+    triple-block))
+
+#_(defmethod ast/ast-node->jena :triple/spo [_ [_ spo]]
+  (mapcat (fn [[s po-coll]]
+            (map (fn [[p o]] [s p o]) po-coll))
+          spo))
+
+(defmethod ast/ast-node->jena :triple.nform/po [_ [_ po]]
+  (mapcat (fn [[p o-coll]]
+            (map (fn [o] [p o]) o-coll))
+          po))
+
+(defmethod ast/ast-node->jena :triple.nform/po-empty [_ [_ _]]
+  ;; FIXME
+  nil)
+
+(defmethod ast/ast-node->jena :triple.nform/o [_ [_ o]]
+  o)
+
+;; Quads
 
 (defmethod ast/ast-node->jena :triple.quad/spo #_:triple/quad-triples
   [_opts [_ triple-elements]]
