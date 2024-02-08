@@ -89,26 +89,32 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defprotocol SubjectObject
-  (-init-node [list-entry])
-  (-triples [list-entry]))
+  "Protocol for triple subjects and objects. This covers RDF Lists,
+    blank node collections, and regular nodes."
+  (-head-node [subj-obj]
+    "Return the Node that external Triples should point to..")
+  (-nested-triples [subj-obj]
+    "Return any Triples that are nested in the subject or object."))
 
 (extend-protocol SubjectObject
   Node
-  (-init-node [node] node)
-  (-triples [_] []))
+  (-head-node [node] node)
+  (-nested-triples [_] []))
 
-(defrecord RDFList [head-node triples]
+(defrecord RDFList [first-node triples]
   SubjectObject
-  (-init-node [_] head-node)
-  (-triples [_] (triple-element->seq triples)))
+  (-head-node [_] first-node)
+  (-nested-triples [_] (triple-element->seq triples)))
 
 (defrecord BlankNodeColl [subject-node triples]
   SubjectObject
-  (-init-node [_] subject-node)
-  (-triples [_] (triple-element->seq triples)))
+  (-head-node [_] subject-node)
+  (-nested-triples [_] (triple-element->seq triples)))
 
 (defprotocol Predicate
-  (-create-triple [pred subj obj]))
+  "Protocol for triple predicates. This covers paths and regular nodes."
+  (-create-triple [pred subj obj]
+    "Create a triple from the subject, predicate, and object"))
 
 (extend-protocol Predicate
   Node
@@ -137,38 +143,43 @@
 (defn- add-triple! [triple-acc triple]
   (-add-triple! triple triple-acc))
 
-(defn- add-triples! [triple-acc triples]
+(defn- add-triple-coll! [triple-acc triples]
   (dorun (map (fn [triple] (add-triple! triple-acc triple))
               triples)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; AST Methods
+;; Blank Node + Triple Helpers
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(def rdf-first NodeConst/nodeFirst)
+(def rdf-rest NodeConst/nodeRest)
+(def rdf-nil NodeConst/nodeNil)
 
 (defn- new-bnode! ^Node [^LabelToNodeMap bnode-m]
   (.allocNode bnode-m))
 
 (defn- s->triples [s]
-  (or (not-empty (-triples s))
+  (or (not-empty (-nested-triples s))
       (throw (ex-info "Subject without predicates or objects is not an RDF list or blank node collecton!"
                       {:kind    ::illegal-subject
                        :subject s}))))
 
 (defn- spo->triples [s p o]
-  (let [s-node    (-init-node s)
-        o-node    (-init-node o)
-        s-triples (-triples s)
-        o-triples (-triples o)
+  (let [s-node    (-head-node s)
+        o-node    (-head-node o)
+        s-triples (-nested-triples s)
+        o-triples (-nested-triples o)
         triple    (create-triple s-node p o-node)]
     (concat s-triples [triple] o-triples)))
 
-;; These multimethod dispatches (specifically `:triple/vec` and `triple/nform`)
-;; return ElementPathBlocks since that is the most general syntax Element that
-;; can be used in all clauses (WHERE, CONSTRUCT, DELETE, INSERT, etc).
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; AST Methods
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(def rdf-first NodeConst/nodeFirst)
-(def rdf-rest NodeConst/nodeRest)
-(def rdf-nil NodeConst/nodeNil)
+;; These multimethod dispatches (specifically `:triple.vec/spo` and
+;; `triple.nform/spo`) return ElementPathBlocks since that is the most general
+;; syntax Element that can be used in all clauses (WHERE, CONSTRUCT, DELETE,
+;; INSERT, etc).
 
 (defmethod ast/ast-node->jena :triple/path [_ [_ path]]
   path)
@@ -182,17 +193,16 @@
            next-bnode (new-bnode! bnode-m)
            list       list]
       (if-some [list-entry (first list)]
-        (let [node         (-init-node list-entry)
-              triples      (-triples list-entry)
+        (let [node         (-head-node list-entry)
+              triples      (-nested-triples list-entry)
               first-triple (create-triple curr-bnode rdf-first node)
               rest-triple  (if (some? (second list))
                              (create-triple curr-bnode rdf-rest next-bnode)
                              (create-triple curr-bnode rdf-rest rdf-nil))]
           (add-triple! triple-block first-triple)
-          (when (not-empty triples)
-            (add-triples! triple-block triples))
+          (add-triple-coll! triple-block triples)
           (add-triple! triple-block rest-triple)
-          (recur next-bnode (.allocNode bnode-m) (rest list)))
+          (recur next-bnode (new-bnode! bnode-m) (rest list)))
         (->RDFList init-node triple-block)))))
 
 (defmethod ast/ast-node->jena :triple/bnodes
@@ -202,13 +212,12 @@
         subj-node    (new-bnode! bnode-m)]
     (dorun
      (for [[p o] po-pairs
-           :let [o-node    (-init-node o)
-                 o-triples (-triples o)
+           :let [o-node    (-head-node o)
+                 o-triples (-nested-triples o)
                  triple    (create-triple subj-node p o-node)]]
        (do
          (add-triple! triple-block triple)
-         (when (not-empty o-triples)
-           (add-triples! triple-block o-triples)))))
+         (add-triple-coll! triple-block o-triples))))
     (->BlankNodeColl subj-node triple-block)))
 
 ;; Vectors
@@ -216,26 +225,26 @@
 (defmethod ast/ast-node->jena :triple.vec/spo [_ [_ [s p o]]]
   (let [triple-block (ElementPathBlock.)
         triples      (spo->triples s p o)]
-    (add-triples! triple-block triples)
+    (add-triple-coll! triple-block triples)
     triple-block))
 
 (defmethod ast/ast-node->jena :triple.vec/s [_ [_ [s]]]
   (let [triple-block (ElementPathBlock.)
         triples      (s->triples s)]
-    (add-triples! triple-block triples)
+    (add-triple-coll! triple-block triples)
     triple-block))
 
 ;; Normal Forms
 
-(defmethod ast/ast-node->jena :triple.nform/spo [_ [_ spo-coll]]
+(defmethod ast/ast-node->jena :triple.nform/spo [_ [_ spo]]
   (let [triple-block (ElementPathBlock.)
         triples      (mapcat
                       (fn [[s po-coll]]
                         (if (empty? po-coll)
                           (s->triples s)
                           (mapcat (fn [[p o]] (spo->triples s p o)) po-coll)))
-                      spo-coll)]
-    (add-triples! triple-block triples)
+                      spo)]
+    (add-triple-coll! triple-block triples)
     triple-block))
 
 (defmethod ast/ast-node->jena :triple.nform/po [_ [_ po]]
