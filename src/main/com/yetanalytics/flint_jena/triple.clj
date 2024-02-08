@@ -91,9 +91,9 @@
 (defprotocol SubjectObject
   "Protocol for triple subjects and objects. This covers RDF Lists,
     blank node collections, and regular nodes."
-  (-head-node [subj-obj]
+  (-head-node [subject-or-object]
     "Return the Node that external Triples should point to..")
-  (-nested-triples [subj-obj]
+  (-nested-triples [subject-or-object]
     "Return any Triples that are nested in the subject or object."))
 
 (extend-protocol SubjectObject
@@ -113,20 +113,24 @@
 
 (defprotocol Predicate
   "Protocol for triple predicates. This covers paths and regular nodes."
-  (-create-triple [pred subj obj]
-    "Create a triple from the subject, predicate, and object"))
+  (-create-triple [predicate subject object]
+    "Create a triple from `subject`, `predicate`, and `object`."))
 
 (extend-protocol Predicate
   Node
-  (-create-triple [p s o]
-    (Triple. s p o))
+  (-create-triple [pred subj obj]
+    (Triple. subj pred obj))
 
   Path
-  (-create-triple [p s o]
-    (TriplePath. s p o)))
+  (-create-triple [pred subj obj]
+    (TriplePath. subj pred obj)))
 
-(defprotocol ASTTriple ; Can't call this "Triple" for obvious reasons
-  (-add-triple! [triple triple-acc]))
+(defprotocol ASTTriple
+  "Protocol for triples (we can't call this \"Triple\" since that would clash
+    with Jena's Triple class)."
+  (-add-triple! [triple triple-acc]
+    "Add `triple` to `triple-acc` (which should be an instance of
+     TripleCollector)."))
 
 (extend-protocol ASTTriple
   Triple
