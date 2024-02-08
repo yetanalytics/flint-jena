@@ -32,7 +32,7 @@
            (.addTriple (make-triple "s" "p" "o")))
          (->> '[?s ?p ?o]
               (s/conform ts/triple-vec-spec)
-              (conj [:triple/vec])
+              (conj [:triple.vec/spo])
               (ast/ast->jena {}))
          (NodeIsomorphismMap.)))
     (is (.equalTo
@@ -40,7 +40,7 @@
            (.addTriplePath (make-inv-path-triple "s" "http://foo.org/bar" "o")))
          (->> '[?s (inv "<http://foo.org/bar>") ?o]
               (s/conform ts/triple-vec-spec)
-              (conj [:triple/vec])
+              (conj [:triple.vec/spo])
               (ast/ast->jena {}))
          (NodeIsomorphismMap.))))
   (testing "Normal form test"
@@ -54,7 +54,7 @@
          (->> '{?s {?p1 #{?o1a ?o1b}
                     ?p2 #{?o2a ?o2b}}}
               (s/conform ts/normal-form-spec)
-              (conj [:triple/nform])
+              (conj [:triple.nform/spo])
               (ast/ast->jena {}))
          (NodeIsomorphismMap.)))
     (is (.equalTo
@@ -66,6 +66,6 @@
          (->> '{?s {(inv "<http://ex.org/1>") #{?o1a ?o1b}
                     (inv "<http://ex.org/2>") #{?o2a ?o2b}}}
               (s/conform ts/normal-form-spec)
-              (conj [:triple/nform])
+              (conj [:triple.nform/spo])
               (ast/ast->jena {}))
          (NodeIsomorphismMap.)))))

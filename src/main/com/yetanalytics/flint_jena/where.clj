@@ -186,3 +186,7 @@
 (defmethod ast/ast-node->jena :where/special
   [_ [_ element]]
   element)
+
+(defmethod ast/ast-node->jena :where/triple
+  [_ [_ element]]
+  element)

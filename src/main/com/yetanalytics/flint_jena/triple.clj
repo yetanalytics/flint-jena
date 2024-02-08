@@ -52,29 +52,50 @@
    ([p s o ^TripleCollectorMark coll idx]
     (.addTriplePath coll idx ^TriplePath (-create-triple p s o)))))
 
-(defmethod ast/ast-node->jena :triple/vec [_ [_ [s p o]]]
+#_(extend-protocol Object
+  Node
+  
+  ElementPathBlock)
+
+(defmethod ast/ast-node->jena :triple.vec/spo [_ [_ [s p o]]]
   (let [triple-block (ElementPathBlock.)]
     (-add-triple! p s o triple-block)
     triple-block))
 
-(defmethod ast/ast-node->jena :triple/nform [_ [_ nform]]
+;; FIXME
+(defmethod ast/ast-node->jena :triple.vec/s [_ [_ [_head block]]]
+  ;; subject is a RDF list or blank node vector, so it is already
+  ;; an TripleCollector/ElementPathBlock
+  block)
+
+(defmethod ast/ast-node->jena :triple.nform/spo [_ [_ spo-coll]]
   (let [triple-block (ElementPathBlock.)]
-    (dorun (map-indexed
+    (->> spo-coll
+         (mapcat
+          (fn [[s po-coll]] (map (fn [[p o]] [s p o]) po-coll)))
+         (map-indexed
+          (fn [idx [s p o]] (-add-triple! p s o triple-block idx)))
+         dorun)
+    #_(dorun (map-indexed
             (fn [idx [s p o]] (-add-triple! p s o triple-block idx))
-            nform))
+            spo-coll))
     triple-block))
 
-(defmethod ast/ast-node->jena :triple/spo [_ [_ spo]]
+#_(defmethod ast/ast-node->jena :triple/spo [_ [_ spo]]
   (mapcat (fn [[s po-coll]]
             (map (fn [[p o]] [s p o]) po-coll))
           spo))
 
-(defmethod ast/ast-node->jena :triple/po [_ [_ po]]
+(defmethod ast/ast-node->jena :triple.nform/po [_ [_ po]]
   (mapcat (fn [[p o-coll]]
             (map (fn [o] [p o]) o-coll))
           po))
 
-(defmethod ast/ast-node->jena :triple/o [_ [_ o]]
+(defmethod ast/ast-node->jena :triple.nform/po-empty [_ [_ _]]
+  ;; FIXME
+  nil)
+
+(defmethod ast/ast-node->jena :triple.nform/o [_ [_ o]]
   o)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -146,3 +167,15 @@
                  :let   [quad (Quad. graph-node triple)]]
              (.add pattern quad)))
     pattern))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; Quads
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmethod ast/ast-node->jena :triple.quad/spo #_:triple/quad-triples
+  [_opts [_ triple-elements]]
+  (triple-elements->basic-pattern triple-elements))
+
+(defmethod ast/ast-node->jena :triple.quad/gspo #_:triple/quads
+  [_opts [_ [graph-node triple-bgp]]]
+  (basic-pattern->quad-pattern triple-bgp graph-node))
