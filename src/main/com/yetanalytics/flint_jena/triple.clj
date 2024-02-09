@@ -188,33 +188,33 @@
 (defmethod ast/ast-node->jena :triple/path [_ [_ path]]
   path)
 
+(defn- make-rdf-list [bnode-m list]
+  (let [triple-block (ElementPathBlock.)
+        init-node    (new-bnode! bnode-m)]
+    (loop [curr-bnode init-node
+           next-bnode (new-bnode! bnode-m)
+           list       list]
+      (if-some [list-entry (first list)]
+        (let [node         (-head-node list-entry)
+              triples      (-nested-triples list-entry)
+              first-triple (create-triple curr-bnode rdf-first node)
+              rest-triple  (if (some? (second list))
+                             (create-triple curr-bnode rdf-rest next-bnode)
+                             (create-triple curr-bnode rdf-rest rdf-nil))]
+          (add-triple! triple-block first-triple)
+          (add-triple-coll! triple-block triples)
+          (add-triple! triple-block rest-triple)
+          (recur next-bnode (new-bnode! bnode-m) (rest list)))
+        (->RDFList init-node triple-block)))))
+
 (defmethod ast/ast-node->jena :triple/list
   [{:keys [active-bnode-map] :as opts} [_ list]]
   (if (empty? list)
     rdf-nil
-    (let [bnode-m      (get opts @active-bnode-map)
-          triple-block (ElementPathBlock.)
-          init-node    (new-bnode! bnode-m)]
-      (loop [curr-bnode init-node
-             next-bnode (new-bnode! bnode-m)
-             list       list]
-        (if-some [list-entry (first list)]
-          (let [node         (-head-node list-entry)
-                triples      (-nested-triples list-entry)
-                first-triple (create-triple curr-bnode rdf-first node)
-                rest-triple  (if (some? (second list))
-                               (create-triple curr-bnode rdf-rest next-bnode)
-                               (create-triple curr-bnode rdf-rest rdf-nil))]
-            (add-triple! triple-block first-triple)
-            (add-triple-coll! triple-block triples)
-            (add-triple! triple-block rest-triple)
-            (recur next-bnode (new-bnode! bnode-m) (rest list)))
-          (->RDFList init-node triple-block))))))
+    (make-rdf-list (get opts @active-bnode-map) list)))
 
-(defmethod ast/ast-node->jena :triple/bnodes
-  [{:keys [active-bnode-map] :as opts} [_ po-pairs]]
-  (let [bnode-m      (get opts @active-bnode-map)
-        triple-block (ElementPathBlock.)
+(defn- make-bnode-coll [bnode-m po-pairs]
+  (let [triple-block (ElementPathBlock.)
         subj-node    (new-bnode! bnode-m)]
     (dorun
      (for [[p o] po-pairs
@@ -225,6 +225,10 @@
          (add-triple! triple-block triple)
          (add-triple-coll! triple-block o-triples))))
     (->BlankNodeColl subj-node triple-block)))
+
+(defmethod ast/ast-node->jena :triple/bnodes
+  [{:keys [active-bnode-map] :as opts} [_ po-pairs]]
+  (make-bnode-coll (get opts @active-bnode-map) po-pairs))
 
 ;; Vectors
 
