@@ -190,24 +190,26 @@
 
 (defmethod ast/ast-node->jena :triple/list
   [{:keys [active-bnode-map] :as opts} [_ list]]
-  (let [bnode-m      (get opts @active-bnode-map)
-        triple-block (ElementPathBlock.)
-        init-node    (new-bnode! bnode-m)]
-    (loop [curr-bnode init-node
-           next-bnode (new-bnode! bnode-m)
-           list       list]
-      (if-some [list-entry (first list)]
-        (let [node         (-head-node list-entry)
-              triples      (-nested-triples list-entry)
-              first-triple (create-triple curr-bnode rdf-first node)
-              rest-triple  (if (some? (second list))
-                             (create-triple curr-bnode rdf-rest next-bnode)
-                             (create-triple curr-bnode rdf-rest rdf-nil))]
-          (add-triple! triple-block first-triple)
-          (add-triple-coll! triple-block triples)
-          (add-triple! triple-block rest-triple)
-          (recur next-bnode (new-bnode! bnode-m) (rest list)))
-        (->RDFList init-node triple-block)))))
+  (if (empty? list)
+    rdf-nil
+    (let [bnode-m      (get opts @active-bnode-map)
+          triple-block (ElementPathBlock.)
+          init-node    (new-bnode! bnode-m)]
+      (loop [curr-bnode init-node
+             next-bnode (new-bnode! bnode-m)
+             list       list]
+        (if-some [list-entry (first list)]
+          (let [node         (-head-node list-entry)
+                triples      (-nested-triples list-entry)
+                first-triple (create-triple curr-bnode rdf-first node)
+                rest-triple  (if (some? (second list))
+                               (create-triple curr-bnode rdf-rest next-bnode)
+                               (create-triple curr-bnode rdf-rest rdf-nil))]
+            (add-triple! triple-block first-triple)
+            (add-triple-coll! triple-block triples)
+            (add-triple! triple-block rest-triple)
+            (recur next-bnode (new-bnode! bnode-m) (rest list)))
+          (->RDFList init-node triple-block))))))
 
 (defmethod ast/ast-node->jena :triple/bnodes
   [{:keys [active-bnode-map] :as opts} [_ po-pairs]]
