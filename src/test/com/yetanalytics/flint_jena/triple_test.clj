@@ -175,6 +175,12 @@
     (.addTriple (make-bnode-head-triple "_:b0" "bp" "bq"))
     (.addTriple (make-bnode-head-triple "_:b0" "br" "bs"))))
 
+;; NOTE: Jena, using QueryFactory/create, uses pre-order traversal to
+;; label the blank nodes, while flint-jena uses post-order traversl. The
+;; resulting graphs are isomorphic (which is why tests pass here), but
+;; since Jena allocates variable nodes instead of blank nodes for lists and
+;; bnode colls, equality checks fail in end-to-end thests.
+
 (def triples-list-bnodes-subj
   "```
    ( ?x [ ?y ?z ] ( ?w ) ) .
@@ -238,6 +244,9 @@
 (defn- opt-map []
   {:blank-var-map    (LabelToNodeMap/createVarMap)
    :blank-node-map   (LabelToNodeMap/createBNodeMap)
+   ;; This is set to `:blank-var-map` in production, but we set it to
+   ;; `:blank-node-map` here since otherwise isomorphic graphs will
+   ;; fail the `.equalTo` check.
    :active-bnode-map (atom :blank-node-map)})
 
 (defn triples=
