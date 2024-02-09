@@ -1,0 +1,4 @@
+;; SELECT with empty lists and blank node vectors
+{:select [?x ?y]
+ :where  [[() ?x []]
+          [[] ?y ()]]}
