@@ -187,26 +187,26 @@
                               :iri->datatype ax/xsd-datatype-map}))
          (NodeIsomorphismMap.)))))
 
-(def subquery-fix-1
+(def subquery-1
   (QueryFactory/create
    "SELECT ?x ?y ?z WHERE { ?x ?y ?z }"))
 
-(def subquery-fix-2
+(def subquery-2
   (QueryFactory/create
    "SELECT ?x WHERE { ?x ?y ?z } GROUP BY ?x HAVING (?x = ?z)"))
 
-(def subquery-fix-3
+(def subquery-3
   (QueryFactory/create
    "SELECT DISTINCT ?x WHERE { ?x ?y ?z } ORDER BY ASC (?x) LIMIT 100 OFFSET 2"))
 
-(def subquery-fix-4
+(def subquery-4
   (QueryFactory/create
    "SELECT REDUCED ?x ?d WHERE { ?x ?y ?z } VALUES ?d { <http://foo.org/bar> }"))
 
 (deftest subquery-test
   (testing "Subquery"
     (is (.equalTo
-         (ElementSubQuery. subquery-fix-1)
+         (ElementSubQuery. subquery-1)
          (->> '{:select [?x ?y ?z]
                 :where  [[?x ?y ?z]]}
               (s/conform ::ws/where)
@@ -214,7 +214,7 @@
                               :query-stack (atom [(Query. prologue)])}))
          (NodeIsomorphismMap.)))
     (is (.equalTo
-         (ElementSubQuery. subquery-fix-2)
+         (ElementSubQuery. subquery-2)
          (->> '{:select   [?x]
                 :where    [[?x ?y ?z]]
                 :group-by [?x]
@@ -224,7 +224,7 @@
                               :query-stack (atom [(Query. prologue)])}))
          (NodeIsomorphismMap.)))
     (is (.equalTo
-         (ElementSubQuery. subquery-fix-3)
+         (ElementSubQuery. subquery-3)
          (->> '{:select-distinct [?x]
                 :where           [[?x ?y ?z]]
                 :order-by        [(asc ?x)]
@@ -235,7 +235,7 @@
                               :query-stack (atom [(Query. prologue)])}))
          (NodeIsomorphismMap.)))
     (is (.equalTo
-         (ElementSubQuery. subquery-fix-4)
+         (ElementSubQuery. subquery-4)
          (->> '{:select-reduced [?x ?d]
                 :where          [[?x ?y ?z]]
                 :values         {?d ["<http://foo.org/bar>"]}}
@@ -243,7 +243,7 @@
               (ast/ast->jena {:prologue    prologue
                               :query-stack (atom [(Query. prologue)])}))
          (NodeIsomorphismMap.)))
-    (let [subquery (ElementSubQuery. subquery-fix-1)
+    (let [subquery (ElementSubQuery. subquery-1)
           triple   (doto (ElementPathBlock.)
                      (.addTriple bar-triple))
           element  (doto (ElementGroup.)
