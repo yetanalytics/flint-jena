@@ -123,14 +123,6 @@
 ;; Graph Update
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defmethod ast/ast-node->jena :triple/quad-triples
-  [_opts [_ triple-elements]]
-  (t/triple-elements->basic-pattern triple-elements))
-
-(defmethod ast/ast-node->jena :triple/quads
-  [_opts [_ [graph-node triple-bgp]]]
-  (t/basic-pattern->quad-pattern triple-bgp graph-node))
-
 ;; Construct quad accumulators (i.e. QuadBlocks -> QuadAcc)
 ;; These are defined in this namespace since QuadAcc/QuadDataAcc are found
 ;; in the sparql.modify.request package, i.e. they're specific to updates.
