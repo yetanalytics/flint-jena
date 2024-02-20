@@ -8,12 +8,12 @@
 
 A companion library to [Flint](https://github.com/yetanalytics/flint) for the direct compilation of Flint data into [Apache Jena](https://jena.apache.org/)-based SPARQL queries and updates.
 
-Uses Flint version [v0.2.1](https://github.com/yetanalytics/flint/releases/tag/v0.2.1).
+Uses Flint version [v0.3.0](https://github.com/yetanalytics/flint/releases/tag/v0.3.0).
 
 ## Installation
 
 ```clojure
-{com.yetanalytics/flint-jena {:mvn/version "0.1.2"
+{com.yetanalytics/flint-jena {:mvn/version "0.1.3"
                               :exclusions [org.clojure/clojure]}}
 ```
 
@@ -72,4 +72,3 @@ Which then outputs the following to `target/bench/query.txt`:
 Copyright © 2022-2024 Yet Analytics, Inc.
 
 Distributed under the Apache License version 2.0.
-
