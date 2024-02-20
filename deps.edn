@@ -5,11 +5,9 @@
         org.apache.jena/jena-arq  {:mvn/version "4.8.0"
                                    :exclusions  [org.slf4j/slf4j-api]}
         org.slf4j/slf4j-api       {:mvn/version "1.7.36"}
-        com.yetanalytics/flint    {:git/sha "572555b1cec0285201b19624fc1190e780d8430e"
-                                   :git/url "https://github.com/yetanalytics/flint.git"}
-        #_{:mvn/version "0.2.1"
-           :exclusions  [org.clojure/clojure
-                         org.clojure/clojurescript]}}
+        com.yetanalytics/flint    {:mvn/version "0.3.0"
+                                   :exclusions  [org.clojure/clojure
+                                                 org.clojure/clojurescript]}}
  :aliases
  {:bench {:extra-paths ["src/bench" "dev-resources"]
           :extra-deps  {criterium/criterium
