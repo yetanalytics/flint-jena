@@ -69,6 +69,6 @@ Which then outputs the following to `target/bench/query.txt`:
 
 ## License
 
-Copyright © 2022-2024 Yet Analytics, Inc.
+Copyright © 2022-2025 Yet Analytics, Inc.
 
 Distributed under the Apache License version 2.0.
