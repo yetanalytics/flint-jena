@@ -20,3 +20,8 @@ bench-queries:
 
 bench-updates:
 	clojure -X:bench com.yetanalytics.flint-jena-bench/bench-updates
+
+.PHONY: pom.xml
+
+pom.xml:
+	clojure -X:deps mvn-pom :user nil

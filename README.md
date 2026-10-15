@@ -67,6 +67,22 @@ Which then outputs the following to `target/bench/query.txt`:
 | select-2.edn |  91.55 ± 0.00 |  37.61 ± 0.00 | 53.93 ± 0.00 |   58.91% |
 ```
 
+## Dependency vulnerability tracking
+
+The `Deps` workflow submits the library's Maven dependency tree to GitHub's
+dependency graph on pushes to `main` and can also be run manually. Dependabot
+uses this graph to check for known vulnerabilities.
+
+`make pom.xml` regenerates the ignored POM from the base dependencies in
+`deps.edn`, preserving their exclusions and excluding local user configuration.
+The snapshot is associated with `deps.edn` in GitHub and includes Clojure, Jena,
+SLF4J, Flint, and their transitive Maven dependencies.
+
+The `:bench` and `:test` aliases are excluded, including Criterium, benchmark
+logging, coverage tools, and the Cognitect test runner. The test runner is a Git
+dependency and needs handling beyond Maven POM generation. Benchmark and test
+tooling require separate coverage.
+
 ## License
 
 Copyright © 2022-2025 Yet Analytics, Inc.
