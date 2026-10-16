@@ -1,10 +1,23 @@
 {:paths ["src/main"]
- :deps {org.clojure/clojure       {:mvn/version "1.11.1"}
+ :deps {org.clojure/clojure       {:mvn/version "1.11.4"}
         org.apache.jena/jena-core {:mvn/version "4.8.0"
                                    :exclusions  [org.slf4j/slf4j-api]}
         org.apache.jena/jena-arq  {:mvn/version "4.8.0"
                                    :exclusions  [org.slf4j/slf4j-api]}
         org.slf4j/slf4j-api       {:mvn/version "1.7.36"}
+        ;; Pin patched versions of Jena's transitive dependencies.
+        com.fasterxml.jackson.core/jackson-core {:mvn/version "2.18.11"}
+        com.fasterxml.jackson.core/jackson-databind {:mvn/version "2.18.11"}
+        com.fasterxml.jackson.core/jackson-annotations {:mvn/version "2.18.11"}
+        com.google.protobuf/protobuf-java {:mvn/version "3.25.5"}
+        org.apache.thrift/libthrift {:mvn/version "0.24.0"}
+        ;; Thrift 0.24.0 otherwise selects vulnerable HttpComponents Core 5.2.
+        org.apache.httpcomponents.client5/httpclient5 {:mvn/version "5.6.3"}
+        org.apache.httpcomponents.core5/httpcore5 {:mvn/version "5.4.3"}
+        org.apache.httpcomponents.core5/httpcore5-h2 {:mvn/version "5.4.3"}
+        org.apache.commons/commons-lang3 {:mvn/version "3.18.0"}
+        org.apache.commons/commons-compress {:mvn/version "1.26.0"}
+        commons-io/commons-io {:mvn/version "2.15.1"}
         com.yetanalytics/flint    {:mvn/version "0.3.0"
                                    :exclusions  [org.clojure/clojure
                                                  org.clojure/clojurescript]}}
